@@ -3,3 +3,14 @@
   ansible.builtin.systemd_service:
     name: zabbix-server
     state: restarted
+
+# 公式手順 f. (systemctl restart zabbix-server zabbix-agent2 apache2)相当
+# パッケージ導入時に Apache が Zabbix 用の設定を読み込むよう再起動する
+- name: Zabbix関連サービス再起動
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    state: restarted
+  loop:
+    - zabbix-server
+    - zabbix-agent2
+    - apache2

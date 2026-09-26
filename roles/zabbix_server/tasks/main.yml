@@ -5,6 +5,7 @@
   ansible.builtin.apt:
     name: "{{ zabbix_server_packages }}"
     state: present
+  notify: Zabbix関連サービス再起動
 
 - name: 初期スキーマ投入済み確認
   ansible.builtin.command:
