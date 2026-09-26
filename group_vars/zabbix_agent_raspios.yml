@@ -1,0 +1,6 @@
+---
+# エージェント導入対象のうち Raspberry Pi OS 13 (Trixie) のホスト共通
+ansible_user: pi
+
+# Zabbix公式ダウンロードページ(7.0 LTS / Raspberry Pi OS / 13)の記載どおり
+zabbix_release_url: "https://repo.zabbix.com/zabbix/7.0/raspbian/pool/main/z/zabbix-release/zabbix-release_latest_7.0+debian13_all.deb"

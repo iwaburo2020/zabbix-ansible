@@ -9,3 +9,7 @@ all:
     zabbix_agent:
       hosts:
         raspberrypi-desktop:
+      children:
+        zabbix_agent_raspios:
+          hosts:
+            nas001b:

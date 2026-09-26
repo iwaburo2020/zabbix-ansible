@@ -1,0 +1,3 @@
+---
+# NAS/NFSサーバー、Raspberry pi CM5 4GB、Raspberry Pi OS Trixie (64bit)
+ansible_host: 192.168.200.7
