@@ -1,0 +1,86 @@
+---
+# Zabbix用データベース構築(PostgreSQL / Ubuntu 標準パッケージ)
+
+- name: PostgreSQL 導入
+  ansible.builtin.apt:
+    name: postgresql
+    state: present
+    update_cache: true
+
+- name: postgresql.conf 存在確認
+  ansible.builtin.stat:
+    path: "{{ postgresql_conf_dir }}/postgresql.conf"
+  register: pg_conf
+
+- name: postgresql.conf が無い場合は中止
+  ansible.builtin.fail:
+    msg: "{{ postgresql_conf_dir }}/postgresql.conf がありません。postgresql_version を確認してください"
+  when: not pg_conf.stat.exists
+
+- name: conf.d 読み込み設定の確認(OS標準の include_dir)
+  ansible.builtin.command: grep -Eq "^include_dir[[:space:]]*=?[[:space:]]*'conf\.d'" {{ postgresql_conf_dir }}/postgresql.conf
+  register: pg_include_chk
+  changed_when: false
+  failed_when: false
+
+- name: conf.d を読み込まない設定の場合は中止
+  ansible.builtin.fail:
+    msg: "postgresql.conf に include_dir = 'conf.d' がありません。設定方法を再確認してください"
+  when: pg_include_chk.rc != 0
+
+- name: 待受アドレス設定(postgresql.conf は変更せず conf.d に追加)
+  ansible.builtin.copy:
+    dest: "{{ postgresql_conf_dir }}/conf.d/zabbix.conf"
+    content: |
+      # Zabbix用(Ansible管理)
+      listen_addresses = 'localhost,{{ zabbix_db_ip }}'
+    owner: postgres
+    group: postgres
+    mode: "0644"
+  notify: PostgreSQL 再起動
+
+- name: pg_hba.conf 退避(初回のみ)
+  ansible.builtin.command: cp -p {{ postgresql_conf_dir }}/pg_hba.conf {{ postgresql_conf_dir }}/pg_hba.conf.org
+  args:
+    creates: "{{ postgresql_conf_dir }}/pg_hba.conf.org"
+
+- name: pg_hba.conf にZabbixサーバーからの接続を追記
+  ansible.builtin.blockinfile:
+    path: "{{ postgresql_conf_dir }}/pg_hba.conf"
+    marker: "# {mark} Zabbix (Ansible管理)"
+    block: |
+      host    {{ zabbix_db_name }}    {{ zabbix_db_user }}    {{ zabbix_server_ip }}/32    scram-sha-256
+  notify: PostgreSQL 再起動
+
+- name: 設定反映(ロール・DB作成前)
+  ansible.builtin.meta: flush_handlers
+
+- name: PostgreSQL 起動・自動起動
+  ansible.builtin.systemd_service:
+    name: postgresql
+    state: started
+    enabled: true
+
+- name: DBユーザー存在確認
+  ansible.builtin.command:
+    argv: [runuser, -u, postgres, --, psql, -tAc, "SELECT 1 FROM pg_roles WHERE rolname='{{ zabbix_db_user }}'"]
+  register: pg_role_chk
+  changed_when: false
+
+- name: DBユーザー作成(公式手順 createuser --pwprompt 相当)
+  ansible.builtin.command:
+    argv: [runuser, -u, postgres, --, psql, -v, ON_ERROR_STOP=1]
+    stdin: "CREATE ROLE {{ zabbix_db_user }} LOGIN PASSWORD '{{ zabbix_db_password }}';"
+  when: pg_role_chk.stdout != "1"
+  no_log: true
+
+- name: DB存在確認
+  ansible.builtin.command:
+    argv: [runuser, -u, postgres, --, psql, -tAc, "SELECT 1 FROM pg_database WHERE datname='{{ zabbix_db_name }}'"]
+  register: pg_db_chk
+  changed_when: false
+
+- name: DB作成(公式手順 createdb -O zabbix zabbix)
+  ansible.builtin.command:
+    argv: [runuser, -u, postgres, --, createdb, -O, "{{ zabbix_db_user }}", "{{ zabbix_db_name }}"]
+  when: pg_db_chk.stdout != "1"

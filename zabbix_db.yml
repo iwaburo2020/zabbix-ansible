@@ -1,0 +1,12 @@
+---
+# Zabbix用データベース構築(raspberrypi-desktop)
+# 実行: ansible-playbook zabbix_db.yml
+- name: zabbix_db
+  hosts: zabbix_db
+  vars_prompt:
+    - name: zabbix_db_password
+      prompt: "Zabbix DBユーザーのパスワード(シングルクォート不可)"
+      private: true
+      confirm: true
+  roles:
+    - zabbix_db

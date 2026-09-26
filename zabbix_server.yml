@@ -1,0 +1,13 @@
+---
+# Zabbixサーバー構築(raspberrypi-zabbix)
+# 実行: ansible-playbook zabbix_server.yml
+# 前提: zabbix_db.yml 実行済み
+- name: zabbix_server
+  hosts: zabbix_server
+  vars_prompt:
+    - name: zabbix_db_password
+      prompt: "Zabbix DBユーザーのパスワード(zabbix_db.yml で設定したもの)"
+      private: true
+  roles:
+    - zabbix_repo
+    - zabbix_server

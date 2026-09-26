@@ -1,0 +1,11 @@
+---
+# ThinkPad X240、Ubuntu 26.04 LTS
+ansible_host: 192.168.200.4
+ansible_user: ubuntu
+
+# Ubuntu 26.04 標準の PostgreSQL
+postgresql_version: "18"
+postgresql_conf_dir: "/etc/postgresql/{{ postgresql_version }}/main"
+
+# Zabbix公式ダウンロードページ(7.0 LTS / Ubuntu / 26.04)の記載どおり(エージェント導入時に使用)
+zabbix_release_url: "https://repo.zabbix.com/zabbix/7.0/ubuntu/pool/main/z/zabbix-release/zabbix-release_latest_7.0+ubuntu26.04_all.deb"

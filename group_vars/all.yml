@@ -1,0 +1,16 @@
+---
+# ---- Zabbix ----
+zabbix_version: "7.0"
+
+# zabbix-release(.deb)取得時のプロキシ(apt のプロキシ設定は使われないため明記)
+zabbix_proxy_env:
+  http_proxy: "http://192.168.200.15:8080"
+  https_proxy: "http://192.168.200.15:8080"
+
+# ---- 接続先 ----
+zabbix_server_ip: 192.168.200.3
+zabbix_db_ip: 192.168.200.4
+
+# ---- データベース ----
+zabbix_db_name: zabbix
+zabbix_db_user: zabbix

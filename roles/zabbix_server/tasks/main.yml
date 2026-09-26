@@ -1,0 +1,64 @@
+---
+# Zabbixサーバー構築(公式手順 b.〜f. 相当、DBは別ホスト)
+
+- name: Zabbixサーバー関連パッケージ導入(公式手順 b.)
+  ansible.builtin.apt:
+    name: "{{ zabbix_server_packages }}"
+    state: present
+
+- name: 初期スキーマ投入済み確認
+  ansible.builtin.command:
+    argv: [psql, -h, "{{ zabbix_db_ip }}", -U, "{{ zabbix_db_user }}", -d, "{{ zabbix_db_name }}", -tAc,
+           "SELECT 1 FROM information_schema.tables WHERE table_name='users'"]
+  environment:
+    PGPASSWORD: "{{ zabbix_db_password }}"
+  register: schema_chk
+  changed_when: false
+  no_log: true
+
+- name: 初期スキーマ投入(公式手順 d. の後半、DBサーバーへ接続して実行)
+  ansible.builtin.shell: >-
+    set -o pipefail &&
+    zcat /usr/share/zabbix-sql-scripts/postgresql/server.sql.gz |
+    psql -q -v ON_ERROR_STOP=1 -h {{ zabbix_db_ip }} -U {{ zabbix_db_user }} -d {{ zabbix_db_name }}
+  args:
+    executable: /bin/bash
+  environment:
+    PGPASSWORD: "{{ zabbix_db_password }}"
+  when: schema_chk.stdout != "1"
+  no_log: true
+
+- name: zabbix_server.conf 退避(初回のみ)
+  ansible.builtin.command: cp -p /etc/zabbix/zabbix_server.conf /etc/zabbix/zabbix_server.conf.org
+  args:
+    creates: /etc/zabbix/zabbix_server.conf.org
+
+- name: zabbix_server.conf DBHost 設定(公式手順 e.、DBは別ホスト)
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/zabbix_server.conf
+    regexp: '^DBHost='
+    insertafter: '^# DBHost='
+    line: "DBHost={{ zabbix_db_ip }}"
+  notify: Zabbixサーバー再起動
+
+- name: zabbix_server.conf DBPassword 設定(公式手順 e.)
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/zabbix_server.conf
+    regexp: '^DBPassword='
+    insertafter: '^# DBPassword='
+    line: "DBPassword={{ zabbix_db_password }}"
+  notify: Zabbixサーバー再起動
+  no_log: true
+
+- name: 設定反映
+  ansible.builtin.meta: flush_handlers
+
+- name: 起動・自動起動(公式手順 f.)
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+  loop:
+    - zabbix-server
+    - zabbix-agent2
+    - apache2

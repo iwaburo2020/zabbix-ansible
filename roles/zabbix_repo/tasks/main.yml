@@ -1,0 +1,19 @@
+---
+# Zabbix公式リポジトリ導入(公式手順 a. Install Zabbix repository 相当)
+
+- name: zabbix-release 取得
+  ansible.builtin.get_url:
+    url: "{{ zabbix_release_url }}"
+    dest: "/var/tmp/{{ zabbix_release_url | basename }}"
+    owner: root
+    group: root
+    mode: "0644"
+  environment: "{{ zabbix_proxy_env }}"
+
+- name: zabbix-release 導入
+  ansible.builtin.apt:
+    deb: "/var/tmp/{{ zabbix_release_url | basename }}"
+
+- name: apt update
+  ansible.builtin.apt:
+    update_cache: true

@@ -1,0 +1,18 @@
+---
+# Raspberry Pi 4B 8GB、USB-SSD起動、Raspberry Pi OS 13 (Trixie)
+ansible_host: 192.168.200.3
+ansible_user: pi
+
+# Zabbix公式ダウンロードページ(7.0 LTS / Raspberry Pi OS / 13)の記載どおり
+zabbix_release_url: "https://repo.zabbix.com/zabbix/7.0/raspbian/pool/main/z/zabbix-release/zabbix-release_latest_7.0+debian13_all.deb"
+
+# Zabbix公式ダウンロードページ(Server, Frontend, Agent 2 / PostgreSQL / Apache)の記載どおり
+# postgresql-client は DBサーバー(別ホスト)へ初期スキーマを投入するために追加
+zabbix_server_packages:
+  - zabbix-server-pgsql
+  - zabbix-frontend-php
+  - php8.4-pgsql
+  - zabbix-apache-conf
+  - zabbix-sql-scripts
+  - zabbix-agent2
+  - postgresql-client
