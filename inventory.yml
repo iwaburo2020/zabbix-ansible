@@ -6,3 +6,6 @@ all:
     zabbix_db:
       hosts:
         raspberrypi-desktop:
+    zabbix_agent:
+      hosts:
+        raspberrypi-desktop:

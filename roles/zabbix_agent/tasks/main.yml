@@ -1,0 +1,43 @@
+---
+# Zabbixエージェント2 導入(公式手順 c. と e. 相当)
+
+- name: Zabbixエージェント2 導入(公式手順 c.)
+  ansible.builtin.apt:
+    name: zabbix-agent2
+    state: present
+
+- name: zabbix_agent2.conf 退避(初回のみ)
+  ansible.builtin.command: cp -p /etc/zabbix/zabbix_agent2.conf /etc/zabbix/zabbix_agent2.conf.org
+  args:
+    creates: /etc/zabbix/zabbix_agent2.conf.org
+
+# パッケージ標準の有効行(Server=127.0.0.1 など)を書き換える。コメント行はそのまま残す
+- name: zabbix_agent2.conf Server 設定
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/zabbix_agent2.conf
+    regexp: '^Server='
+    line: "Server={{ zabbix_server_ip }}"
+  notify: Zabbixエージェント2 再起動
+
+- name: zabbix_agent2.conf ServerActive 設定
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/zabbix_agent2.conf
+    regexp: '^ServerActive='
+    line: "ServerActive={{ zabbix_server_ip }}"
+  notify: Zabbixエージェント2 再起動
+
+- name: zabbix_agent2.conf Hostname 設定(Zabbixに登録するホスト名と同じ)
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/zabbix_agent2.conf
+    regexp: '^Hostname='
+    line: "Hostname={{ inventory_hostname }}"
+  notify: Zabbixエージェント2 再起動
+
+- name: 設定反映
+  ansible.builtin.meta: flush_handlers
+
+- name: 起動・自動起動(公式手順 e.)
+  ansible.builtin.systemd_service:
+    name: zabbix-agent2
+    state: started
+    enabled: true

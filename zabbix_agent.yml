@@ -1,0 +1,9 @@
+---
+# Zabbixエージェント2 導入(Raspberry Pi OS / Ubuntu)
+# 実行: ansible-playbook zabbix_agent.yml -l <ホスト名>
+# sudoパスワードが同じホストだけを -l でまとめて指定すること
+- name: zabbix_agent
+  hosts: zabbix_agent
+  roles:
+    - zabbix_repo
+    - zabbix_agent
