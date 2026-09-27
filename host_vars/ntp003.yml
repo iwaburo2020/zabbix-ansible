@@ -1,0 +1,3 @@
+---
+# NTPサーバー#3、Raspberry pi 4B 2GB、Raspberry Pi OS Trixie (64bit)、NFS boot
+ansible_host: 192.168.200.13

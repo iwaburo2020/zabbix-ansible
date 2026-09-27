@@ -13,3 +13,8 @@ all:
         zabbix_agent_raspios:
           hosts:
             nas001b:
+            ntp001:
+            ntp002:
+            ntp003:
+            ntp004:
+            gps001b:
