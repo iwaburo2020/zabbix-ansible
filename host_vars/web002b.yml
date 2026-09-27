@@ -1,0 +1,3 @@
+---
+# Webサーバー#2(nginx)、Raspberry pi 4B 1GB+PoE、Raspberry Pi OS Trixie (64bit)、NFS boot
+ansible_host: 192.168.200.25

@@ -18,3 +18,5 @@ all:
             ntp003:
             ntp004:
             gps001b:
+            web001b:
+            web002b:
