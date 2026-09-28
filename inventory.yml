@@ -20,3 +20,6 @@ all:
             gps001b:
             web001b:
             web002b:
+            dns001b:
+            dns002b:
+            cache001b:

@@ -1,0 +1,3 @@
+---
+# DNSサーバー#1、Raspberry pi 5 4GB+PoE、Raspberry Pi OS Trixie (64bit)、NVME SSD
+ansible_host: 192.168.200.18
