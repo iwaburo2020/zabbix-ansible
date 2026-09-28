@@ -1,6 +1,30 @@
 ---
 # Zabbix公式リポジトリ導入(公式手順 a. Install Zabbix repository 相当)
 
+# /etc/apt/apt.conf の Acquire::https::proxy が "https://..." の場合、
+# https のリポジトリで apt update が SSL エラーになるため "http://..." に修正する
+# (初期構築用 RaspberryPi_script の配布元 apt.conf は変更しない)
+- name: apt.conf https プロキシ行の確認
+  ansible.builtin.command: grep -q '^Acquire::https::proxy "https://' /etc/apt/apt.conf
+  register: apt_conf_https
+  changed_when: false
+  failed_when: apt_conf_https.rc not in [0, 1, 2]
+
+- name: apt.conf 退避(初回のみ)
+  ansible.builtin.command: cp -p /etc/apt/apt.conf /etc/apt/apt.conf.org
+  args:
+    creates: /etc/apt/apt.conf.org
+  when: apt_conf_https.rc == 0
+
+- name: apt.conf https プロキシ行を http:// に修正
+  ansible.builtin.replace:
+    path: /etc/apt/apt.conf
+    after: 'Acquire::https::proxy "'
+    before: '";'
+    regexp: 'https://'
+    replace: 'http://'
+  when: apt_conf_https.rc == 0
+
 - name: zabbix-release 取得
   ansible.builtin.get_url:
     url: "{{ zabbix_release_url }}"
