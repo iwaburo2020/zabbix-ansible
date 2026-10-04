@@ -1,0 +1,10 @@
+---
+# ログ監視で /var/log/syslog・/var/log/messages(root:adm 0640)を読むため
+# ログファイルの権限・rsyslog・logrotate の設定は変更しない
+# main.yml と zabbix_agent.yml(Zabbixサーバー向け)から読み込む
+- name: zabbix ユーザーを adm グループに追加
+  ansible.builtin.user:
+    name: zabbix
+    groups: adm
+    append: true
+  notify: Zabbixエージェント2 再起動

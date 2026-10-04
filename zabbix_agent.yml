@@ -7,3 +7,13 @@
   roles:
     - zabbix_repo
     - zabbix_agent
+
+# Zabbixサーバー(raspberrypi-zabbix)のエージェント2はパッケージ標準設定のまま
+# ログ監視のため zabbix ユーザーの adm グループ追加だけを行う
+- name: zabbix_agent(Zabbixサーバー)
+  hosts: zabbix_server
+  tasks:
+    - name: zabbix ユーザーを adm グループに追加
+      ansible.builtin.import_role:
+        name: zabbix_agent
+        tasks_from: adm.yml
