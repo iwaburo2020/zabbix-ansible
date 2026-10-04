@@ -1,0 +1,8 @@
+---
+# pi の sudo 設定をほかのホストに合わせる(Raspberry Pi OS)
+# 実行: ansible-playbook sudoers_pi.yml -l <ホスト名>
+- name: sudoers_pi
+  hosts: zabbix_agent_raspios:zabbix_server
+  gather_facts: false
+  roles:
+    - sudoers_pi

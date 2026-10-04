@@ -1,0 +1,4 @@
+# Placed by zabbix-ansible (same rule as 90-cloud-init-users on other hosts)
+
+# User rules for pi
+pi ALL=(ALL) NOPASSWD:ALL

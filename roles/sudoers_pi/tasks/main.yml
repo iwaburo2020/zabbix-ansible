@@ -1,0 +1,19 @@
+---
+# pi の sudo をパスワード不要にする(ほかのホストと同じ規則)
+# pi の NOPASSWD 規則がすでにあるホスト(010_pi-nopasswd / 90-cloud-init-users)は変更しない
+
+- name: pi の NOPASSWD 規則の確認
+  ansible.builtin.command: grep -rqs '^pi .*NOPASSWD' /etc/sudoers /etc/sudoers.d
+  register: pi_nopasswd
+  changed_when: false
+  failed_when: pi_nopasswd.rc not in [0, 1]
+
+- name: 90-cloud-init-users 配置(visudo で構文検査してから配置)
+  ansible.builtin.copy:
+    src: 90-cloud-init-users
+    dest: /etc/sudoers.d/90-cloud-init-users
+    owner: root
+    group: root
+    mode: "0440"
+    validate: /usr/sbin/visudo -cf %s
+  when: pi_nopasswd.rc == 1
