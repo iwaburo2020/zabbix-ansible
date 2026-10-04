@@ -1,0 +1,9 @@
+---
+# Zabbixエージェント2 導入(Windows)
+# 実行: ansible-playbook zabbix_agent_windows.yml -l <ホスト名>
+# become は使わない(BECOME password は Enter のみでよい)
+- name: zabbix_agent_windows
+  hosts: zabbix_agent_windows
+  gather_facts: false
+  roles:
+    - zabbix_agent_windows

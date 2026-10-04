@@ -1,0 +1,17 @@
+---
+# Zabbixエージェント2 導入(Windows、公式 MSI)
+# Server / ServerActive / Hostname は MSI のパラメーターで設定する
+# サービスは MSI により登録・起動される(スタートアップの種類は MSI 標準の自動(遅延開始))
+
+- name: Zabbixエージェント2 MSI 取得
+  ansible.windows.win_get_url:
+    url: "{{ zabbix_agent_win_msi_url }}"
+    dest: 'C:\Windows\Temp\{{ zabbix_agent_win_msi_url | basename }}'
+    proxy_url: "{{ zabbix_proxy_env.https_proxy }}"
+    force: false
+
+- name: Zabbixエージェント2 導入(MSI)
+  ansible.windows.win_package:
+    path: 'C:\Windows\Temp\{{ zabbix_agent_win_msi_url | basename }}'
+    arguments: "SERVER={{ zabbix_server_ip }} SERVERACTIVE={{ zabbix_server_ip }} HOSTNAME={{ inventory_hostname }}"
+    state: present
