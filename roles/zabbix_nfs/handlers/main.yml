@@ -1,0 +1,5 @@
+---
+# rpc.mountd(manage-gids)が保持する uid → グループ のキャッシュを破棄し、
+# 追加したユーザーをすぐに反映させる(設定ファイルは変更しない)
+- name: NFS グループ情報キャッシュ破棄
+  ansible.builtin.shell: date +%s > /proc/net/rpc/auth.unix.gid/flush

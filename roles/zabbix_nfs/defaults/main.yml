@@ -1,0 +1,5 @@
+---
+# NFS boot ホストの zabbix の uid のうち、nas001b に存在しないもの
+# 105: ntp002、ntp003、ntp004(web001b、web002b は 104 で nas001b の zabbix と同じ)
+zabbix_nfs_uids:
+  - 105

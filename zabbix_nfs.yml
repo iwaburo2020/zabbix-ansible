@@ -1,0 +1,7 @@
+---
+# NFS boot ホストの zabbix がログを読めるようにする(NFSサーバー nas001b)
+# 実行: ansible-playbook zabbix_nfs.yml
+- name: zabbix_nfs
+  hosts: nas001b
+  roles:
+    - zabbix_nfs

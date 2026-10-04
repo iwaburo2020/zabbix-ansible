@@ -1,0 +1,20 @@
+---
+# nas001b は manage-gids=y(パッケージ標準)のため、NFS クライアントの uid を
+# nas001b の /etc/passwd・/etc/group で判定する
+# NFS boot ホストの zabbix の uid でユーザーを作成し、adm に所属させる
+# 既存のユーザー・nfs.conf・exports は変更しない(uid が使用中の場合は失敗する)
+
+- name: NFS boot ホストの zabbix 用ユーザー作成(adm に所属)
+  ansible.builtin.user:
+    name: "zabbix{{ item }}"
+    uid: "{{ item }}"
+    group: nogroup
+    groups: adm
+    append: true
+    system: true
+    create_home: false
+    home: /nonexistent
+    shell: /usr/sbin/nologin
+    comment: "zabbix (uid {{ item }}) on NFS boot hosts"
+  loop: "{{ zabbix_nfs_uids }}"
+  notify: NFS グループ情報キャッシュ破棄
