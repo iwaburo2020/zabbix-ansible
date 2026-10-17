@@ -12,15 +12,23 @@
     mode: "0644"
   environment: "{{ zabbix_proxy_env }}"
 
+# 公式手順の rpm -Uvh と同じく署名は検証しない(検証用の鍵は zabbix-release に同梱されているため)
 - name: zabbix-release 導入
   ansible.builtin.dnf:
     name: "/var/tmp/{{ zabbix_release_url | basename }}"
     state: present
+    disable_gpg_check: true
   register: zabbix_release_install
 
 - name: dnf clean all(zabbix-release 導入時のみ)
   ansible.builtin.command: dnf clean all
   when: zabbix_release_install is changed
+
+# zabbix.repo の [zabbix] の gpgkey と同じ鍵(zabbix-agent2 の署名検証に使う)
+- name: Zabbix の GPG 鍵取り込み
+  ansible.builtin.rpm_key:
+    key: /etc/pki/rpm-gpg/RPM-GPG-KEY-ZABBIX-B5333005
+    state: present
 
 - name: Zabbixエージェント2 導入
   ansible.builtin.dnf:
