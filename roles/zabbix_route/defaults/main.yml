@@ -1,0 +1,9 @@
+---
+# raspberrypi-zabbix の NetworkManager プロファイル名・デバイス名(nmcli connection show --active で確認済み)
+zabbix_route_conn: eth0
+zabbix_route_device: eth0
+
+# backup001 のガジェットモード側ネットワーク(backup001 192.168.250.1 / wap001b usb0 192.168.250.2)
+# → wap001b の VLAN200 側 IP 経由
+zabbix_route_dest: 192.168.250.0/30
+zabbix_route_gw: 192.168.200.22

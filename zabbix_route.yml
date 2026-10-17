@@ -1,0 +1,7 @@
+---
+# backup001 の死活監視(ICMP 192.168.250.1)のため、Zabbixサーバーに wap001b 経由の経路を追加
+# 実行: ansible-playbook zabbix_route.yml
+- name: zabbix_route
+  hosts: zabbix_server
+  roles:
+    - zabbix_route

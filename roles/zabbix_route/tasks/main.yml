@@ -1,0 +1,19 @@
+---
+# backup001 の死活監視(ICMP 192.168.250.1)のため、NetworkManager のプロファイルに wap001b 経由の経路を追加する
+# 既存の設定(アドレス・ゲートウェイ・DNS)は変更せず、経路の追加のみ行う
+# 退避ファイルは system-connections 配下に置かない(NetworkManager の読み込み対象にしないため)
+
+- name: nmconnection 退避(初回のみ)
+  ansible.builtin.command: cp -p /etc/NetworkManager/system-connections/{{ zabbix_route_conn }}.nmconnection /etc/NetworkManager/{{ zabbix_route_conn }}.nmconnection.org
+  args:
+    creates: /etc/NetworkManager/{{ zabbix_route_conn }}.nmconnection.org
+
+- name: 現在の経路設定の確認
+  ansible.builtin.command: nmcli -g ipv4.routes connection show {{ zabbix_route_conn }}
+  register: zabbix_route_current
+  changed_when: false
+
+- name: 経路を追加(追加済みの場合は変更しない)
+  ansible.builtin.command: nmcli connection modify {{ zabbix_route_conn }} +ipv4.routes "{{ zabbix_route_dest }} {{ zabbix_route_gw }}"
+  when: zabbix_route_dest not in zabbix_route_current.stdout
+  notify: 経路設定反映

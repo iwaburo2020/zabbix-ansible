@@ -1,0 +1,4 @@
+---
+# インターフェースを停止せずに、プロファイルの変更(経路の追加)を反映する
+- name: 経路設定反映
+  ansible.builtin.command: nmcli device reapply {{ zabbix_route_device }}
