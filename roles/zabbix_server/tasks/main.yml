@@ -51,6 +51,14 @@
   notify: Zabbixサーバー再起動
   no_log: true
 
+- name: zabbix_server.conf Fping6Location 設定(IPv6 は OS で無効化しているため fping6 を使わない)
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/zabbix_server.conf
+    regexp: '^Fping6Location='
+    insertafter: '^# Fping6Location='
+    line: "Fping6Location="
+  notify: Zabbixサーバー再起動
+
 - name: 設定反映
   ansible.builtin.meta: flush_handlers
 
