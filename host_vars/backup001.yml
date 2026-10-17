@@ -1,0 +1,4 @@
+---
+# バックアップサーバー、Raspberry pi 3A+、Raspberry Pi OS Trixie (64bit)、wap001b にガジェットモードで接続(SSH は wap001b の 2222 から転送)
+ansible_host: 192.168.200.22
+ansible_port: 2222

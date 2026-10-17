@@ -26,6 +26,7 @@ all:
             dhcp001b:
             proxy001b:
             wap001b:
+            backup001:
     zabbix_agent_windows:
       hosts:
         proxyvm001b:
