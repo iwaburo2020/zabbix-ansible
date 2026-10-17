@@ -1,0 +1,8 @@
+---
+# Zabbixエージェント2 導入(AlmaLinux)
+# 実行: ansible-playbook zabbix_agent_almalinux.yml -l <ホスト名>
+# almalinux の sudo はパスワード不要(BECOME password は Enter のみでよい)
+- name: zabbix_agent_almalinux
+  hosts: zabbix_agent_almalinux
+  roles:
+    - zabbix_agent_almalinux

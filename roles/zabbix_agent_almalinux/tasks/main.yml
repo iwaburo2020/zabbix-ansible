@@ -1,0 +1,64 @@
+---
+# Zabbixエージェント2 導入(AlmaLinux 9、公式手順の リポジトリ導入 → エージェント導入 → 起動 相当)
+# dnf のプロキシは OS の /etc/dnf/dnf.conf の設定をそのまま使う
+# SELinux・firewalld は変更しない
+
+- name: zabbix-release 取得
+  ansible.builtin.get_url:
+    url: "{{ zabbix_release_url }}"
+    dest: "/var/tmp/{{ zabbix_release_url | basename }}"
+    owner: root
+    group: root
+    mode: "0644"
+  environment: "{{ zabbix_proxy_env }}"
+
+- name: zabbix-release 導入
+  ansible.builtin.dnf:
+    name: "/var/tmp/{{ zabbix_release_url | basename }}"
+    state: present
+  register: zabbix_release_install
+
+- name: dnf clean all(zabbix-release 導入時のみ)
+  ansible.builtin.command: dnf clean all
+  when: zabbix_release_install is changed
+
+- name: Zabbixエージェント2 導入
+  ansible.builtin.dnf:
+    name: zabbix-agent2
+    state: present
+
+- name: zabbix_agent2.conf 退避(初回のみ)
+  ansible.builtin.command: cp -p /etc/zabbix/zabbix_agent2.conf /etc/zabbix/zabbix_agent2.conf.org
+  args:
+    creates: /etc/zabbix/zabbix_agent2.conf.org
+
+# パッケージ標準の有効行(Server=127.0.0.1 など)を書き換える。コメント行はそのまま残す
+- name: zabbix_agent2.conf Server 設定
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/zabbix_agent2.conf
+    regexp: '^Server='
+    line: "Server={{ zabbix_server_ip }}"
+  notify: Zabbixエージェント2 再起動
+
+- name: zabbix_agent2.conf ServerActive 設定
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/zabbix_agent2.conf
+    regexp: '^ServerActive='
+    line: "ServerActive={{ zabbix_server_ip }}"
+  notify: Zabbixエージェント2 再起動
+
+- name: zabbix_agent2.conf Hostname 設定(Zabbixに登録するホスト名と同じ)
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/zabbix_agent2.conf
+    regexp: '^Hostname='
+    line: "Hostname={{ inventory_hostname }}"
+  notify: Zabbixエージェント2 再起動
+
+- name: 設定反映
+  ansible.builtin.meta: flush_handlers
+
+- name: 起動・自動起動
+  ansible.builtin.systemd_service:
+    name: zabbix-agent2
+    state: started
+    enabled: true

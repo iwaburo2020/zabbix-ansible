@@ -29,3 +29,6 @@ all:
     zabbix_agent_windows:
       hosts:
         proxyvm001b:
+    zabbix_agent_almalinux:
+      hosts:
+        logbackup001:

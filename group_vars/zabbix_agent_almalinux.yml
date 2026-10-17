@@ -1,0 +1,8 @@
+---
+# エージェント導入対象のうち AlmaLinux 9 のホスト共通
+ansible_user: almalinux
+
+# Zabbix公式リポジトリ(7.0 LTS / AlmaLinux 9)
+# zabbix-release は noarch で、x86_64 のディレクトリにのみ置かれている(aarch64 のディレクトリには無い)
+# 導入される zabbix.repo は $basearch を参照するため、aarch64 のパッケージが使われる
+zabbix_release_url: "https://repo.zabbix.com/zabbix/7.0/alma/9/x86_64/zabbix-release-latest-7.0.el9.noarch.rpm"
