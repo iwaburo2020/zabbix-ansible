@@ -35,6 +35,25 @@
     name: zabbix-agent2
     state: present
 
+# ログ監視で /var/log/messages・/var/log/syslog を読むため(ほかのホストと同じ root:adm 0640、zabbix は adm に所属)
+# logrotate(create、属性指定なし)は元ファイルの権限を引き継ぐため、rsyslog・logrotate の設定は変更しない
+- name: zabbix ユーザーを adm グループに追加
+  ansible.builtin.user:
+    name: zabbix
+    groups: adm
+    append: true
+  notify: Zabbixエージェント2 再起動
+
+- name: ログファイルの所有者・権限(ほかのホストと同じ root:adm 0640)
+  ansible.builtin.file:
+    path: "{{ item }}"
+    owner: root
+    group: adm
+    mode: "0640"
+  loop:
+    - /var/log/messages
+    - /var/log/syslog
+
 - name: zabbix_agent2.conf 退避(初回のみ)
   ansible.builtin.command: cp -p /etc/zabbix/zabbix_agent2.conf /etc/zabbix/zabbix_agent2.conf.org
   args:
