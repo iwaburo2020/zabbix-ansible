@@ -1,0 +1,4 @@
+---
+# wap001b の待受ポート(wap001b 自身の Agent が 10050 を使用するため別ポート)→ backup001 の Agent
+zabbix_nat_listen_port: 10060
+zabbix_nat_dest: "192.168.250.1:10050"

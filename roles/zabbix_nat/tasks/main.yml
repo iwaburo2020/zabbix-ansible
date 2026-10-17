@@ -1,0 +1,16 @@
+---
+# /etc/nftables.conf の既存の SSH 転送(2222 → 192.168.250.1:22)の次の行に、Agent 用の転送を追加する
+# 既存の行・インデントは変更せず、追加する行は既存の行と同じインデントにする
+
+- name: nftables.conf 退避(初回のみ)
+  ansible.builtin.command: cp -p /etc/nftables.conf /etc/nftables.conf.org
+  args:
+    creates: /etc/nftables.conf.org
+
+- name: Agent 用の転送を追加(SSH 転送の次の行、追加済みの場合は変更しない)
+  ansible.builtin.replace:
+    path: /etc/nftables.conf
+    regexp: '^([ \t]*)(iifname "eth2" tcp dport 2222 dnat to 192\.168\.250\.1:22)\n(?![ \t]*iifname "eth2" tcp dport {{ zabbix_nat_listen_port }} )'
+    replace: '\1\2\n\1iifname "eth2" tcp dport {{ zabbix_nat_listen_port }} dnat to {{ zabbix_nat_dest }}\n'
+    validate: /usr/sbin/nft -c -f %s
+  notify: nftables 再起動

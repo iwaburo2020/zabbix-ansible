@@ -1,0 +1,7 @@
+---
+# backup001(wap001b にガジェットモードで接続)の Agent(Passive)へ Zabbixサーバーから接続するための転送(wap001b の nftables)
+# 実行: ansible-playbook zabbix_nat.yml
+- name: zabbix_nat
+  hosts: wap001b
+  roles:
+    - zabbix_nat
