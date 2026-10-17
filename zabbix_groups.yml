@@ -1,0 +1,11 @@
+---
+# Zabbix のホストグループ・テンプレートグループを作成(Zabbix API 経由)
+# 実行: ansible-playbook zabbix_groups.yml
+- name: zabbix_groups
+  hosts: zabbix_server
+  gather_facts: false
+  become: false
+  vars_files:
+    - vars/zabbix_api.yml
+  roles:
+    - zabbix_groups

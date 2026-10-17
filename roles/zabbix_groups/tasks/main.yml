@@ -1,0 +1,12 @@
+---
+# 存在しないグループのみ作成する(既存のグループは変更しない)
+
+- name: ホストグループ作成
+  community.zabbix.zabbix_group:
+    host_groups: "{{ zabbix_host_groups }}"
+    state: present
+
+- name: テンプレートグループ作成
+  community.zabbix.zabbix_templategroup:
+    template_groups: "{{ zabbix_template_groups }}"
+    state: present

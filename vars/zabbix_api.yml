@@ -1,0 +1,12 @@
+---
+# Zabbix API(フロントエンド http://192.168.200.3/zabbix)への接続設定
+# 対象は inventory の zabbix_server(raspberrypi-zabbix、ansible_host 192.168.200.3)
+# API トークンはリポジトリに含めず、humidai002 の ~/.zabbix_api_token(権限 600)から読み込む
+# humidai002 のプロキシ設定を使わずに直接接続する
+ansible_connection: httpapi
+ansible_network_os: community.zabbix.zabbix
+ansible_httpapi_port: 80
+ansible_httpapi_use_ssl: false
+ansible_httpapi_use_proxy: false
+ansible_zabbix_url_path: zabbix
+ansible_zabbix_auth_key: "{{ lookup('ansible.builtin.file', lookup('ansible.builtin.env', 'HOME') + '/.zabbix_api_token') }}"

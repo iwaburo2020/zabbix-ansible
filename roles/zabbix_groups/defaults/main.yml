@@ -1,0 +1,25 @@
+---
+# ホストグループ(役割別・OS別・NW機器)。Zabbix 標準のグループは変更しない
+zabbix_host_groups:
+  - Role/Zabbix
+  - Role/DB
+  - Role/NAS
+  - Role/NTP
+  - Role/GPS
+  - Role/Web
+  - Role/DNS
+  - Role/Cache
+  - Role/DHCP
+  - Role/Proxy
+  - Role/WAP
+  - Role/Backup
+  - Role/Log
+  - OS/RaspberryPiOS
+  - OS/Ubuntu
+  - OS/Windows
+  - OS/AlmaLinux
+  - Network/Yamaha
+
+# テンプレートグループ(独自テンプレート用)
+zabbix_template_groups:
+  - Templates/Custom
