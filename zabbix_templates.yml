@@ -1,0 +1,11 @@
+---
+# Zabbix の独自テンプレート(Base-・Time-・Role-)を登録(Zabbix API 経由)
+# 実行: ansible-playbook zabbix_templates.yml
+- name: zabbix_templates
+  hosts: zabbix_server
+  gather_facts: false
+  become: false
+  vars_files:
+    - vars/zabbix_api.yml
+  roles:
+    - zabbix_templates

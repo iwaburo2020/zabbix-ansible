@@ -1,0 +1,81 @@
+{#- Zabbix 7.0 のインポート形式(YAML)。item(zabbix_custom_templates の1件)から1テンプレートを生成する -#}
+{#- uuid は名前とキーから固定値を生成する(Zabbix は UUIDv4 形式を要求するため version・variant の桁を合わせる) -#}
+{%- macro uuid4(seed) -%}
+{%- set h = (seed | to_uuid) | replace('-', '') -%}
+{{ h[0:12] ~ '4' ~ h[13:16] ~ '8' ~ h[17:32] }}
+{%- endmacro -%}
+{%- set t = item.name -%}
+zabbix_export:
+  version: '7.0'
+  template_groups:
+    - uuid: {{ uuid4('template_group/' ~ zabbix_custom_template_group) }}
+      name: {{ zabbix_custom_template_group | to_json }}
+  templates:
+    - uuid: {{ uuid4('template/' ~ t) }}
+      template: {{ t | to_json }}
+      name: {{ t | to_json }}
+      groups:
+        - name: {{ zabbix_custom_template_group | to_json }}
+{% if item.link is defined %}
+      templates:
+{% for l in item.link %}
+        - name: {{ l | to_json }}
+{% endfor %}
+{% endif %}
+      items:
+{% for f in item.logs | default([]) %}
+{% set key = 'log[' ~ f ~ ',"' ~ zabbix_log_regexp ~ '",,,skip]' %}
+        - uuid: {{ uuid4(t ~ '/' ~ key) }}
+          name: {{ ('Log ' ~ f) | to_json }}
+          type: ZABBIX_ACTIVE
+          key: {{ key | to_json }}
+          value_type: LOG
+          triggers:
+            - uuid: {{ uuid4(t ~ '/' ~ key ~ '/trigger') }}
+              expression: {{ ('count(/' ~ t ~ '/' ~ key ~ ',' ~ zabbix_log_window ~ ')>0') | to_json }}
+              name: {{ ('Log message detected in ' ~ f) | to_json }}
+              priority: WARNING
+{% endfor %}
+{% for l in item.eventlogs | default([]) %}
+{% set key = 'eventlog[' ~ l ~ ',,"' ~ zabbix_eventlog_severity ~ '",,,,skip]' %}
+        - uuid: {{ uuid4(t ~ '/' ~ key) }}
+          name: {{ ('Eventlog ' ~ l) | to_json }}
+          type: ZABBIX_ACTIVE
+          key: {{ key | to_json }}
+          value_type: LOG
+          triggers:
+            - uuid: {{ uuid4(t ~ '/' ~ key ~ '/trigger') }}
+              expression: {{ ('count(/' ~ t ~ '/' ~ key ~ ',' ~ zabbix_log_window ~ ')>0') | to_json }}
+              name: {{ ('Eventlog ' ~ l ~ ' error detected') | to_json }}
+              priority: WARNING
+{% endfor %}
+{% for u in item.units | default([]) %}
+{% set key = 'systemd.unit.info["' ~ u ~ '"]' %}
+        - uuid: {{ uuid4(t ~ '/' ~ key) }}
+          name: {{ ('Service ' ~ u ~ ' ActiveState') | to_json }}
+          key: {{ key | to_json }}
+          value_type: CHAR
+          triggers:
+            - uuid: {{ uuid4(t ~ '/' ~ key ~ '/trigger') }}
+              expression: {{ ('last(/' ~ t ~ '/' ~ key ~ ')<>"active"') | to_json }}
+              name: {{ ('Service ' ~ u ~ ' is not active') | to_json }}
+              priority: AVERAGE
+{% endfor %}
+{% for p in item.udp_listen | default([]) %}
+{% set key = 'net.udp.listen[' ~ p ~ ']' %}
+        - uuid: {{ uuid4(t ~ '/' ~ key) }}
+          name: {{ ('UDP port ' ~ p ~ ' listening') | to_json }}
+          key: {{ key | to_json }}
+          triggers:
+            - uuid: {{ uuid4(t ~ '/' ~ key ~ '/trigger') }}
+              expression: {{ ('last(/' ~ t ~ '/' ~ key ~ ')=0') | to_json }}
+              name: {{ ('UDP port ' ~ p ~ ' is not listening') | to_json }}
+              priority: AVERAGE
+{% endfor %}
+{% if item.macros is defined %}
+      macros:
+{% for m in item.macros %}
+        - macro: {{ m.macro | to_json }}
+          value: {{ m.value | to_json }}
+{% endfor %}
+{% endif %}

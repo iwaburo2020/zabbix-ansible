@@ -1,0 +1,58 @@
+---
+# 独自テンプレートを登録するテンプレートグループ(zabbix_groups で作成済み)
+zabbix_custom_template_group: Templates/Custom
+
+# ログ監視(案2): 次の正規表現に一致する行だけを収集し、収集した時点で障害とする
+# (?i) は大文字小文字を区別しない指定
+zabbix_log_regexp: "(?i)(error|fail|crit|panic|alert|emerg)"
+# Windows イベントログ(案2): 収集するレベル
+zabbix_eventlog_severity: "Error|Critical"
+# ログの障害は、この期間に新しい行が無ければ自動で解決する
+zabbix_log_window: 10m
+
+# 独自テンプレートの定義
+#   link      : リンクする標準テンプレート(標準テンプレートは変更しない)
+#   logs      : Linux のログファイル(Active)
+#   eventlogs : Windows のイベントログ(Active)
+#   units     : systemd のユニット(Passive、ActiveState が active 以外で障害)
+#   udp_listen: UDP の待受ポート(Passive、待受が無ければ障害)
+#   macros    : テンプレートマクロ(例外はホスト側マクロで上書き)
+zabbix_custom_templates:
+  - name: Base-Linux
+    link: [Linux by Zabbix agent]
+    logs: [/var/log/syslog, /var/log/messages]
+  - name: Base-Windows
+    link: [Windows by Zabbix agent]
+    eventlogs: [System, Application]
+  - name: Time-chrony
+    macros:
+      - {macro: "{$TIME.CHRONY.UNIT}", value: chrony.service}
+    units: ["{$TIME.CHRONY.UNIT}"]
+  - name: Time-timesyncd
+    units: [systemd-timesyncd.service]
+  - name: Role-Zabbix
+    units: [zabbix-server.service, apache2.service]
+  - name: Role-DB
+    units: [postgresql@18-main.service]
+  - name: Role-NAS
+    units: [smbd.service, nmbd.service, nfs-mountd.service, nfs-server.service]
+  - name: Role-NTP
+    udp_listen: [123]
+  - name: Role-GPS
+    units: [gpsd.service]
+  - name: Role-Web-Apache
+    units: [apache2.service]
+  - name: Role-Web-Nginx
+    units: [nginx.service]
+  - name: Role-DNS
+    units: [named.service]
+  - name: Role-Cache
+    units: [unbound.service]
+  - name: Role-DHCP
+    units: [kea-dhcp4-server.service, kea-ctrl-agent.service, isc-stork-agent.service, isc-stork-server.service, postgresql@17-main.service]
+  - name: Role-Proxy-Linux
+    units: [squid.service]
+  - name: Role-WAP
+    units: [hostapd.service]
+  - name: Role-Log
+    units: [rsyslog.service]
