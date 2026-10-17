@@ -1,0 +1,110 @@
+---
+# OS 別の共通設定(OS 別グループと、ホストに直接リンクする標準テンプレート + Base-*)
+zabbix_os_defs:
+  RaspberryPiOS:
+    group: OS/RaspberryPiOS
+    templates: [Linux by Zabbix agent, Base-Linux]
+  Ubuntu:
+    group: OS/Ubuntu
+    templates: [Linux by Zabbix agent, Base-Linux]
+  AlmaLinux:
+    group: OS/AlmaLinux
+    templates: [Linux by Zabbix agent, Base-Linux]
+  Windows:
+    group: OS/Windows
+    templates: [Windows by Zabbix agent, Base-Windows]
+
+# 死活監視(ICMP、Zabbixサーバーから実施)の標準テンプレート
+zabbix_icmp_template: ICMP Ping
+
+# ホスト別の設定(キーは inventory のホスト名。Zabbix 登録名も同じ)
+#   os           : zabbix_os_defs のキー
+#   groups       : 役割別グループ(OS 別グループは os から付与)
+#   templates    : 時刻同期・役割別テンプレート(OS 別・ICMP のテンプレートは自動で付与)
+#   name         : Zabbix 登録名が inventory のホスト名と異なる場合のみ指定
+#   ip / port    : エージェントのインターフェース(既定は ansible_host:10050)
+#   icmp_template: 標準の ICMP Ping 以外を使う場合のみ指定
+#   macros       : ホスト側マクロ(テンプレートマクロの例外)
+zabbix_host_defs:
+  raspberrypi-zabbix:
+    name: Zabbix server            # エージェント Hostname(パッケージ標準)と同じ
+    ip: 127.0.0.1                  # エージェント Server=127.0.0.1(パッケージ標準)
+    os: RaspberryPiOS
+    groups: [Zabbix servers, Role/Zabbix]
+    templates: [Zabbix server health, Time-chrony, Role-Zabbix]
+  raspberrypi-desktop:
+    os: Ubuntu
+    groups: [Role/DB]
+    templates: [Time-timesyncd, Role-DB]
+  nas001b:
+    os: RaspberryPiOS
+    groups: [Role/NAS]
+    templates: [Time-timesyncd, Role-NAS]
+  ntp001:
+    os: RaspberryPiOS
+    groups: [Role/NTP]
+    templates: [Time-chrony, Role-NTP]
+  ntp002:
+    os: RaspberryPiOS
+    groups: [Role/NTP]
+    templates: [Time-chrony, Role-NTP]
+  ntp003:
+    os: RaspberryPiOS
+    groups: [Role/NTP]
+    templates: [Time-chrony, Role-NTP]
+  ntp004:
+    os: RaspberryPiOS
+    groups: [Role/NTP]
+    templates: [Time-chrony, Role-NTP]
+  gps001b:
+    os: RaspberryPiOS
+    groups: [Role/GPS]
+    templates: [Time-chrony, Role-GPS]
+  web001b:
+    os: RaspberryPiOS
+    groups: [Role/Web]
+    templates: [Time-timesyncd, Role-Web-Apache]
+  web002b:
+    os: RaspberryPiOS
+    groups: [Role/Web]
+    templates: [Time-timesyncd, Role-Web-Nginx]
+  dns001b:
+    os: RaspberryPiOS
+    groups: [Role/DNS]
+    templates: [Time-timesyncd, Role-DNS]
+  dns002b:
+    os: RaspberryPiOS
+    groups: [Role/DNS]
+    templates: [Time-timesyncd, Role-DNS]
+  cache001b:
+    os: RaspberryPiOS
+    groups: [Role/Cache]
+    templates: [Time-timesyncd, Role-Cache]
+  dhcp001b:
+    os: RaspberryPiOS
+    groups: [Role/DHCP]
+    templates: [Time-timesyncd, Role-DHCP]
+  proxy001b:
+    os: RaspberryPiOS
+    groups: [Role/Proxy]
+    templates: [Time-timesyncd, Role-Proxy-Linux]
+  proxyvm001b:
+    os: Windows
+    groups: [Role/Proxy]
+    templates: []                  # サービス監視は Windows by Zabbix agent の自動検出
+  wap001b:
+    os: RaspberryPiOS
+    groups: [Role/WAP]
+    templates: [Time-chrony, Role-WAP]
+  backup001:
+    os: RaspberryPiOS
+    groups: [Role/Backup]
+    templates: [Time-timesyncd]
+    port: 10060                    # wap001b の nftables で 192.168.250.1:10050 へ転送
+    icmp_template: ICMP-backup001  # 192.168.250.1 への ICMP(wap001b の ICMP 障害に依存)
+  logbackup001:
+    os: AlmaLinux
+    groups: [Role/Log]
+    templates: [Time-chrony, Role-Log]
+    macros:
+      - {macro: "{$TIME.CHRONY.UNIT}", value: chronyd.service}

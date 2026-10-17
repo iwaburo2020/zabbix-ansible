@@ -1,0 +1,12 @@
+---
+# Zabbix へのホスト登録(グループ所属・テンプレートのリンク・インターフェース)(Zabbix API 経由)
+# 前提: zabbix_groups.yml、zabbix_templates.yml を実行済み
+# 実行: ansible-playbook zabbix_hosts.yml
+- name: zabbix_hosts
+  hosts: zabbix_server
+  gather_facts: false
+  become: false
+  vars_files:
+    - vars/zabbix_api.yml
+  roles:
+    - zabbix_hosts

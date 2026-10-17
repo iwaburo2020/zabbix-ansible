@@ -1,0 +1,21 @@
+---
+# ① 標準の ICMP Ping を使うホストを登録する
+# ② backup001 用の ICMP テンプレートを登録する(wap001b の ICMP 障害に依存させるため、wap001b の登録後に行う)
+# ③ 独自の ICMP テンプレートを使うホスト(backup001)を登録する
+
+- name: ホスト登録(標準の ICMP Ping を使うホスト)
+  ansible.builtin.include_tasks: host.yml
+  loop: "{{ zabbix_host_defs | dict2items | rejectattr('value.icmp_template', 'defined') | list }}"
+  loop_control:
+    label: "{{ item.key }}"
+
+- name: backup001 用 ICMP テンプレート登録
+  community.zabbix.zabbix_template:
+    template_yaml: "{{ lookup('ansible.builtin.file', 'ICMP-backup001.yml') }}"
+    state: present
+
+- name: ホスト登録(独自の ICMP テンプレートを使うホスト)
+  ansible.builtin.include_tasks: host.yml
+  loop: "{{ zabbix_host_defs | dict2items | selectattr('value.icmp_template', 'defined') | list }}"
+  loop_control:
+    label: "{{ item.key }}"

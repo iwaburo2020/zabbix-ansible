@@ -1,0 +1,18 @@
+---
+# 1ホストを登録する(item は zabbix_host_defs の1件。key=inventory のホスト名、value=設定)
+# link_templates に無いテンプレートはクリアされるため、リンクするテンプレートはすべて列挙する
+- name: "ホスト登録 {{ item.key }}"
+  community.zabbix.zabbix_host:
+    host_name: "{{ item.value.name | default(item.key) }}"
+    host_groups: "{{ [zabbix_os_defs[item.value.os].group] + item.value.groups }}"
+    link_templates: "{{ zabbix_os_defs[item.value.os].templates + [item.value.icmp_template | default(zabbix_icmp_template)] + item.value.templates }}"
+    interfaces:
+      - type: agent
+        main: 1
+        useip: 1
+        ip: "{{ item.value.ip | default(hostvars[item.key].ansible_host) }}"
+        dns: ""
+        port: "{{ item.value.port | default(10050) | string }}"
+    macros: "{{ item.value.macros | default(omit) }}"
+    status: enabled
+    state: present
