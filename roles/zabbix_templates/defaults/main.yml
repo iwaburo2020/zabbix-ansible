@@ -19,10 +19,8 @@ zabbix_log_window: 10m
 #   macros    : テンプレートマクロ(例外はホスト側マクロで上書き)
 zabbix_custom_templates:
   - name: Base-Linux
-    link: [Linux by Zabbix agent]
     logs: [/var/log/syslog, /var/log/messages]
   - name: Base-Windows
-    link: [Windows by Zabbix agent]
     eventlogs: [System, Application]
   - name: Time-chrony
     macros:
