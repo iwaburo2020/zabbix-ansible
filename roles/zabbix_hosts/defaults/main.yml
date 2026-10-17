@@ -92,6 +92,10 @@ zabbix_host_defs:
     os: Windows
     groups: [Role/Proxy]
     templates: []                  # サービス監視は Windows by Zabbix agent の自動検出
+    macros:
+      # 標準テンプレートの除外一覧に、停止が正常な4サービス(GoogleUpdater 2件、LMS、BtLockerService)を追加
+      - macro: "{$SERVICE.NAME.NOT_MATCHES}"
+        value: '^(?:RemoteRegistry|MMCSS|gupdate|SysmonLog|clr_optimization_v.+|sppsvc|gpsvc|Pml Driver HPZ12|Net Driver HPZ12|MapsBroker|IntelAudioService|Intel\(R\) TPM Provisioning Service|dbupdate|DoSvc|CDPUserSvc_.+|WpnUserService_.+|OneSyncSvc_.+|WbioSrvc|BITS|tiledatamodelsvc|GISvc|ShellHWDetection|TrustedInstaller|TabletInputService|CDPSvc|wuauserv|edgeupdate|cbdhsvc_.+|GoogleUpdater.+|LMS|BtLockerService)$'
   wap001b:
     os: RaspberryPiOS
     groups: [Role/WAP]
