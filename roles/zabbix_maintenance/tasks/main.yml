@@ -1,7 +1,8 @@
 ---
 # zabbix_maintenance_defs の1件ごとにメンテナンス期間を登録する
+# (loop するタスクの name に item は使わない。処理中の定義名は label で表示する)
 
-- name: "メンテナンス期間登録 {{ item.name }}"
+- name: メンテナンス期間登録
   community.zabbix.zabbix_maintenance:
     name: "{{ item.name }}"
     desc: "{{ item.desc }}"
