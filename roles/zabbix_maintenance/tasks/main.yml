@@ -1,0 +1,16 @@
+---
+# zabbix_maintenance_defs の1件ごとにメンテナンス期間を登録する
+
+- name: "メンテナンス期間登録 {{ item.name }}"
+  community.zabbix.zabbix_maintenance:
+    name: "{{ item.name }}"
+    desc: "{{ item.desc }}"
+    host_names: "{{ item.host_names }}"
+    collect_data: "{{ item.collect_data }}"
+    active_since: "{{ item.active_since }}"
+    active_till: "{{ item.active_till }}"
+    time_periods: "{{ item.time_periods }}"
+    state: present
+  loop: "{{ zabbix_maintenance_defs }}"
+  loop_control:
+    label: "{{ item.name }}"

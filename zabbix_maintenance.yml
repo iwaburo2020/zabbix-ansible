@@ -1,0 +1,12 @@
+---
+# Zabbix のメンテナンス期間を登録(Zabbix API 経由)
+# 前提: zabbix_hosts.yml を実行済み(対象ホストが登録済み)
+# 実行: ansible-playbook zabbix_maintenance.yml
+- name: zabbix_maintenance
+  hosts: zabbix_server
+  gather_facts: false
+  become: false
+  vars_files:
+    - vars/zabbix_api.yml
+  roles:
+    - zabbix_maintenance

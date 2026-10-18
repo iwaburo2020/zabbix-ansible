@@ -1,0 +1,57 @@
+---
+# メンテナンス期間(Zabbix API で登録。name が同じものは内容を更新する)
+#   name         : メンテナンス名(Zabbix 上で一意)
+#   desc         : 説明
+#   host_names   : 対象ホスト(Zabbix の表示名)
+#   collect_data : true=データ収集あり
+#   active_since / active_till : 有効期間(humidai002 のタイムゾーン Asia/Tokyo で解釈される)
+#   time_periods : 期間(start_time は "HH:MM" の文字列。引用符が無いと YAML で数値になる)
+#     every: second / fourth = 第2週 / 第4週(day_of_week と組み合わせる)
+#     day_of_month: 日にち(Zabbix に「末日」の指定が無いため月ごとの日数で指定)
+#     duration: 分
+zabbix_maintenance_defs:
+  - name: gps001b-reboot
+    desc: "gps001b 定期再起動(第2土曜・第4土曜・毎月末日 23:20 OS再起動 → 翌0:00 OS再起動 → 翌1:00 gpsd起動)"
+    host_names: [gps001b]
+    collect_data: true
+    active_since: "2026-10-01 00:00"
+    active_till: "2037-12-31 00:00"
+    time_periods:
+      # 毎月第2週土曜
+      - frequency: monthly
+        every: second
+        day_of_week: [Saturday]
+        months: [January, February, March, April, May, June, July, August, September, October, November, December]
+        start_time: "23:15"
+        duration: 120
+      # 毎月第4週土曜
+      - frequency: monthly
+        every: fourth
+        day_of_week: [Saturday]
+        months: [January, February, March, April, May, June, July, August, September, October, November, December]
+        start_time: "23:15"
+        duration: 120
+      # 31日(1・3・5・7・8・10・12月)
+      - frequency: monthly
+        day_of_month: 31
+        months: [January, March, May, July, August, October, December]
+        start_time: "23:15"
+        duration: 120
+      # 30日(4・6・9・11月)
+      - frequency: monthly
+        day_of_month: 30
+        months: [April, June, September, November]
+        start_time: "23:15"
+        duration: 120
+      # 28日(2月)
+      - frequency: monthly
+        day_of_month: 28
+        months: [February]
+        start_time: "23:15"
+        duration: 120
+      # 29日(2月)
+      - frequency: monthly
+        day_of_month: 29
+        months: [February]
+        start_time: "23:15"
+        duration: 120
