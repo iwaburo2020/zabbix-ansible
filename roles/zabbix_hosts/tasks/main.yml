@@ -19,3 +19,30 @@
   loop: "{{ zabbix_host_defs | dict2items | selectattr('value.icmp_template', 'defined') | list }}"
   loop_control:
     label: "{{ item.key }}"
+
+# ④ NW機器(SNMP 監視)を登録する
+- name: ホスト登録(NW機器、SNMP)
+  community.zabbix.zabbix_host:
+    host_name: "{{ item.key }}"
+    host_groups: ["{{ zabbix_snmp_group }}"]
+    link_templates: "{{ [zabbix_snmp_template] + item.value.templates }}"
+    interfaces:
+      - type: snmp
+        main: 1
+        useip: 1
+        ip: "{{ item.value.ip }}"
+        dns: ""
+        port: "161"
+        details:
+          version: 2
+          bulk: 1
+          community: "{$SNMP_COMMUNITY}"
+    macros:
+      - macro: "{$SNMP_COMMUNITY}"
+        value: "{{ zabbix_snmp_community }}"
+    status: enabled
+    state: present
+  loop: "{{ zabbix_snmp_host_defs | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  no_log: true                     # コミュニティー名を画面に表示しない

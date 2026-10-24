@@ -112,3 +112,24 @@ zabbix_host_defs:
     templates: [Time-chrony, Role-Log]
     macros:
       - {macro: "{$TIME.CHRONY.UNIT}", value: chronyd.service}
+
+# NW機器(SNMP 監視)の共通設定
+#   SNMPv2c。読み出し専用コミュニティーはリポジトリに含めず、humidai002 の ~/.zabbix_snmp_community(権限 600)から読み込む
+#   死活監視(ICMP)は標準テンプレート Network Generic Device by SNMP に含まれるため、ICMP Ping はリンクしない
+zabbix_snmp_group: Network/Yamaha
+zabbix_snmp_template: Network Generic Device by SNMP
+zabbix_snmp_community: "{{ lookup('ansible.builtin.file', lookup('ansible.builtin.env', 'HOME') + '/.zabbix_snmp_community') }}"
+
+# NW機器のホスト別設定(キーは Zabbix 登録名)
+#   ip        : SNMP のインターフェース(ポート 161)
+#   templates : 標準テンプレート以外にリンクするテンプレート
+zabbix_snmp_host_defs:
+  NVR510:
+    ip: 192.168.200.1
+    templates: [Net-Yamaha-RT]
+  NVR500:
+    ip: 192.168.100.5
+    templates: [Net-Yamaha-RT]
+  WLX212:
+    ip: 192.168.100.9
+    templates: []

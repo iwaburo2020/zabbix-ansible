@@ -72,6 +72,15 @@ zabbix_export:
               name: {{ ('UDP port ' ~ p ~ ' is not listening') | to_json }}
               priority: AVERAGE
 {% endfor %}
+{% for s in item.snmp_items | default([]) %}
+        - uuid: {{ uuid4(t ~ '/' ~ s.key) }}
+          name: {{ s.name | to_json }}
+          type: SNMP_AGENT
+          snmp_oid: {{ ('get[' ~ s.oid ~ ']') | to_json }}
+          key: {{ s.key | to_json }}
+          value_type: FLOAT
+          units: '%'
+{% endfor %}
 {% if item.macros is defined %}
       macros:
 {% for m in item.macros %}
