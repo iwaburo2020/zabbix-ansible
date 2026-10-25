@@ -19,7 +19,7 @@
 
 | 対象 | テンプレート | 収集する内容 |
 |---|---|---|
-| Linux: /var/log/syslog、/var/log/messages | Base-Linux | 正規表現 `(?i)(error|fail|crit|panic|alert|emerg)` に一致する行(大文字小文字を区別しない) |
+| Linux: /var/log/syslog、/var/log/messages | Base-Linux | 正規表現 `(?i)(error\|fail\|crit\|panic\|alert\|emerg)` に一致する行(大文字小文字を区別しない) |
 | Windows: イベントログ System、Application | Base-Windows | レベルが Error、Critical のもの |
 
 - 収集した時点で障害(Log message detected)とする
