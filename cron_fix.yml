@@ -1,0 +1,133 @@
+---
+# cron 定義の修正(docs/design/05_cron.md の5章 No.1〜6)
+# 実行(raspberrypi-desktop 以外):ansible-playbook cron_fix.yml -l 'all:!raspberrypi-desktop'
+# 実行(raspberrypi-desktop):ansible-playbook cron_fix.yml -l raspberrypi-desktop
+# /etc/crontab:修正前に cp -p で /etc/crontab.bkYYYYMMDD(実行日)にコピーしてから修正する
+# root の crontab:crontab コマンドで登録し直す(crontab -e と同じ仕組みのため、事前のコピーは取らない)
+# 修正対象の行が残っている場合だけ修正するため、再実行しても changed=0 になる
+
+- name: No.1 翌日(日曜)の再起動の日付範囲を 9-15・23-29 にする
+  hosts:
+    - raspberrypi-zabbix
+    - raspberrypi-desktop
+    - dns001b
+    - dhcp001b
+    - nas001b
+    - proxy001b
+    - ntp001
+    - ntp002
+    - ntp003
+    - ntp004
+    - web001b
+    - web002b
+    - cache001b
+    - dns002b
+  become: true
+  gather_facts: false
+  vars:
+    target: /etc/crontab
+    backup: "/etc/crontab.bk{{ now(fmt='%Y%m%d') }}"
+    fixes:
+      - name: 第2土曜の翌日(8-14・8-15 の日曜)を 9-15 にする
+        regexp: '^(\d+\s+\d+\s+)0?8-1[45](\s+\*\s+\*\s+root\s+\[ \$\(date "\+\\%w"\) -eq 0 \])'
+        replace: '\g<1>9-15\g<2>'
+      - name: 第4土曜の翌日(22-28・22-29 の日曜)を 23-29 にする
+        regexp: '^(\d+\s+\d+\s+)22-2[89](\s+\*\s+\*\s+root\s+\[ \$\(date "\+\\%w"\) -eq 0 \])'
+        replace: '\g<1>23-29\g<2>'
+  tasks: &fix_tasks
+    - name: 修正対象の行があるか確認する(変更しない)
+      ansible.builtin.replace:
+        path: "{{ target }}"
+        regexp: "{{ item.regexp }}"
+        replace: "{{ item.replace }}"
+      check_mode: true
+      loop: "{{ fixes }}"
+      loop_control:
+        label: "{{ item.name }}"
+      register: need_fix
+
+    - name: 修正前のファイルを cp -p でコピーする
+      ansible.builtin.command:
+        cmd: "cp -p {{ target }} {{ backup }}"
+        creates: "{{ backup }}"
+      when: need_fix is changed
+
+    - name: 修正する
+      ansible.builtin.replace:
+        path: "{{ target }}"
+        regexp: "{{ item.regexp }}"
+        replace: "{{ item.replace }}"
+      loop: "{{ fixes }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+- name: No.2・No.3 第4土曜の日付範囲を 22-28 にする
+  hosts:
+    - cache001b
+    - web001b
+    - wap001b
+  become: true
+  gather_facts: false
+  vars:
+    target: /etc/crontab
+    backup: "/etc/crontab.bk{{ now(fmt='%Y%m%d') }}"
+    fixes:
+      - name: 第4土曜(21-28・22-27・22-29 の土曜)を 22-28 にする
+        regexp: '^(\d+\s+\d+\s+)(?:21-28|22-27|22-29)(\s+\*\s+\*\s+root\s+\[ \$\(date "\+\\%w"\) -eq 6 \])'
+        replace: '\g<1>22-28\g<2>'
+  tasks: *fix_tasks
+
+- name: No.4 ntp001 の root の crontab の毎週の3行をコメントアウトする
+  hosts:
+    - ntp001
+  become: true
+  gather_facts: false
+  vars:
+    fix_regexp: '^((?:59\s+15\s+\*\s+\*\s+sat\s+/usr/local/script/package_update\.sh|59\s+0\s+\*\s+\*\s+sun\s+/usr/local/script/stop\.sh reboot|58\s+0\s+\*\s+\*\s+sun\s+/usr/local/script/make_flagfile\.sh).*)$'
+    fix_replace: '#\g<1>'
+  tasks: &crontab_tasks
+    - name: root の crontab の現在の内容を取得する(crontab -l -u root)
+      ansible.builtin.command: crontab -l -u root
+      register: crontab_now
+      changed_when: false
+      check_mode: false
+
+    - name: 修正後の内容を作る
+      ansible.builtin.set_fact:
+        crontab_new: "{{ crontab_now.stdout | regex_replace(fix_regexp, fix_replace, multiline=True) }}"
+
+    - name: 修正後の行を表示する
+      ansible.builtin.debug:
+        msg: "{{ crontab_new.splitlines() | difference(crontab_now.stdout.splitlines()) }}"
+      when: crontab_new != crontab_now.stdout
+
+    - name: 修正後の内容を登録する(crontab -u root -)
+      ansible.builtin.command:
+        cmd: crontab -u root -
+        stdin: "{{ crontab_new }}"
+      when: crontab_new != crontab_now.stdout
+
+- name: No.5 wap001b のバックアップの出力先を修正する
+  hosts:
+    - wap001b
+  become: true
+  gather_facts: false
+  vars:
+    fix_regexp: '^(00\s+1\s+1\s+\*\s+\*\s+/usr/local/script/backup_file\.sh)\s+> /var/log/backup_file\.log > /dev/null$'
+    fix_replace: '\g<1> >> /var/log/backup_file.log'
+  tasks: *crontab_tasks
+
+- name: No.6 第2土曜の翌日の make_flagfile.sh を 3:58 にする
+  hosts:
+    - web001b
+    - web002b
+  become: true
+  gather_facts: false
+  vars:
+    target: /etc/crontab
+    backup: "/etc/crontab.bk{{ now(fmt='%Y%m%d') }}"
+    fixes:
+      - name: 3:59 の make_flagfile.sh を 3:58 にする
+        regexp: '^59(\s+03\s+)(?:0?8-15|9-15)(\s+\*\s+\*\s+root\s+\[ \$\(date "\+\\%w"\) -eq 0 \] && /usr/local/script/make_flagfile\.sh)'
+        replace: '58\g<1>9-15\g<2>'
+  tasks: *fix_tasks
