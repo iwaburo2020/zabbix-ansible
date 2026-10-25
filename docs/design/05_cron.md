@@ -63,12 +63,12 @@
 
 | No | ホスト | ファイル | 修正内容 | 状態 |
 |---|---|---|---|---|
-| 1 | raspberrypi-zabbix、raspberrypi-desktop、dns001b、dhcp001b、nas001b、proxy001b、ntp001、ntp002、ntp003、ntp004、web001b、web002b、cache001b、dns002b | `/etc/crontab` | 翌日(日曜)の再起動と `make_flagfile.sh` の日付範囲を「9-15」「23-29」にする | 未対応 |
-| 2 | cache001b(21-28)、web001b(22-29) | `/etc/crontab` | 第4土曜のパッケージ更新の日付範囲を「22-28」にする | 未対応 |
-| 3 | wap001b | `/etc/crontab` | 第4土曜のパッケージ更新と再起動の日付範囲「22-27」を「22-28」にする | 未対応 |
-| 4 | ntp001 | root の crontab | 毎週土曜のパッケージ更新、毎週日曜の再起動と `make_flagfile.sh` の3行をコメントアウトする | 未対応 |
-| 5 | wap001b | root の crontab | バックアップの出力先を `>> /var/log/backup_file.log` にする | 未対応 |
-| 6 | web001b、web002b | `/etc/crontab` | 第2土曜の翌日の `make_flagfile.sh` を 3:59 から 3:58 にする | 未対応 |
+| 1 | raspberrypi-zabbix、raspberrypi-desktop、dns001b、dhcp001b、nas001b、proxy001b、ntp001、ntp002、ntp003、ntp004、web001b、web002b、cache001b、dns002b | `/etc/crontab` | 翌日(日曜)の再起動と `make_flagfile.sh` の日付範囲を「9-15」「23-29」にする | 対応済み(2026-10-25) |
+| 2 | cache001b(21-28)、web001b(22-29) | `/etc/crontab` | 第4土曜のパッケージ更新の日付範囲を「22-28」にする | 対応済み(2026-10-25) |
+| 3 | wap001b | `/etc/crontab` | 第4土曜のパッケージ更新と再起動の日付範囲「22-27」を「22-28」にする | 対応済み(2026-10-25) |
+| 4 | ntp001 | root の crontab | 毎週土曜のパッケージ更新、毎週日曜の再起動と `make_flagfile.sh` の3行をコメントアウトする | 対応済み(2026-10-25) |
+| 5 | wap001b | root の crontab | バックアップの出力先を `>> /var/log/backup_file.log` にする | 対応済み(2026-10-25) |
+| 6 | web001b、web002b | `/etc/crontab` | 第2土曜の翌日の `make_flagfile.sh` を 3:59 から 3:58 にする | 対応済み(2026-10-25) |
 
 ## 6. スケジュール表にない定期実行(記録のみ)
 
