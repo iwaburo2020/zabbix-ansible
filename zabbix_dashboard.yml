@@ -1,0 +1,13 @@
+---
+# Zabbix 標準ダッシュボード「Global view」のウィジェットを編集(Zabbix API を ansible.builtin.uri で直接呼ぶ)
+# community.zabbix 4.1.0 にダッシュボード用のモジュールが無いため、dashboard.get / dashboard.update を使う
+# 対象ウィジェット以外(位置・設定)は変更しない。内容が同じ場合は更新しない(changed=0)
+# 前提: zabbix_hosts.yml を実行済み
+# 実行: ansible-playbook zabbix_dashboard.yml
+- name: zabbix_dashboard
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  roles:
+    - zabbix_dashboard

@@ -1,0 +1,27 @@
+{#- Top hosts ウィジェットの fields(Zabbix 7.0 の dashboard.get と同じ形式。type 0=数値、1=文字列) -#}
+{#- 比較のため、値はすべて文字列にする -#}
+- {type: "0", name: maintenance, value: {{ zabbix_dashboard_widget.maintenance | to_json }}}
+- {type: "0", name: show_lines, value: {{ zabbix_dashboard_widget.show_lines | to_json }}}
+- {type: "0", name: column, value: {{ zabbix_dashboard_widget.order_column | to_json }}}
+- {type: "1", name: reference, value: {{ zabbix_dashboard_widget.reference | to_json }}}
+{% for c in zabbix_dashboard_columns %}
+{% set i = loop.index0 | string %}
+- {type: "1", name: {{ ('columns.' ~ i ~ '.name') | to_json }}, value: {{ c.name | to_json }}}
+{% if c.item is defined %}
+- {type: "0", name: {{ ('columns.' ~ i ~ '.data') | to_json }}, value: "1"}
+- {type: "1", name: {{ ('columns.' ~ i ~ '.item') | to_json }}, value: {{ c.item | to_json }}}
+- {type: "0", name: {{ ('columns.' ~ i ~ '.aggregate_function') | to_json }}, value: "0"}
+- {type: "0", name: {{ ('columns.' ~ i ~ '.decimal_places') | to_json }}, value: {{ c.decimals | to_json }}}
+- {type: "0", name: {{ ('columns.' ~ i ~ '.display') | to_json }}, value: "1"}
+- {type: "0", name: {{ ('columns.' ~ i ~ '.history') | to_json }}, value: "1"}
+- {type: "1", name: {{ ('columns.' ~ i ~ '.base_color') | to_json }}, value: {{ c.base_color | default('') | to_json }}}
+{% for t in c.thresholds | default([]) %}
+{% set j = loop.index0 | string %}
+- {type: "1", name: {{ ('columnsthresholds.' ~ i ~ '.color.' ~ j) | to_json }}, value: {{ t.color | to_json }}}
+- {type: "1", name: {{ ('columnsthresholds.' ~ i ~ '.threshold.' ~ j) | to_json }}, value: {{ t.threshold | to_json }}}
+{% endfor %}
+{% else %}
+- {type: "0", name: {{ ('columns.' ~ i ~ '.data') | to_json }}, value: "2"}
+- {type: "1", name: {{ ('columns.' ~ i ~ '.base_color') | to_json }}, value: ""}
+{% endif %}
+{% endfor %}

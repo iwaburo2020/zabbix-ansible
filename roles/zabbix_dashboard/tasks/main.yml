@@ -1,0 +1,72 @@
+---
+# ① Global view の現在の定義を取得する
+# ② 対象ウィジェットの変更後の定義を作り、現在の定義と比較する(fields は name 順に並べて比較)
+# ③ 違いがある場合だけ dashboard.update で更新する(対象以外のウィジェットは取得した定義のまま渡す)
+
+- name: ダッシュボード取得
+  ansible.builtin.uri:
+    url: "{{ zabbix_dashboard_api_url }}"
+    method: POST
+    use_proxy: false
+    headers:
+      Authorization: "Bearer {{ zabbix_dashboard_api_token }}"
+    body_format: json
+    body:
+      jsonrpc: "2.0"
+      method: dashboard.get
+      params:
+        output: [dashboardid, name]
+        selectPages: extend
+        filter:
+          name: "{{ zabbix_dashboard_name }}"
+      id: 1
+  register: zabbix_dashboard_get
+  failed_when: >-
+    zabbix_dashboard_get.json is not defined
+    or zabbix_dashboard_get.json.error is defined
+    or zabbix_dashboard_get.json.result | length != 1
+    or zabbix_dashboard_get.json.result[0].pages | length != 1
+
+- name: 変更後のウィジェット定義を作成して比較
+  ansible.builtin.set_fact:
+    zabbix_dashboard_widgets: "{{ zabbix_dashboard_page.widgets | rejectattr('widgetid', 'equalto', zabbix_dashboard_widget.widgetid) | list + [zabbix_dashboard_new_widget_] }}"
+    zabbix_dashboard_changed: >-
+      {{ (zabbix_dashboard_current | dict2items | rejectattr('key', 'equalto', 'fields') | items2dict)
+         != (zabbix_dashboard_new_widget_ | dict2items | rejectattr('key', 'equalto', 'fields') | items2dict)
+         or (zabbix_dashboard_current.fields | sort(attribute='name'))
+         != (zabbix_dashboard_new_widget_.fields | sort(attribute='name')) }}
+  vars:
+    zabbix_dashboard_page: "{{ zabbix_dashboard_get.json.result[0].pages[0] }}"
+    zabbix_dashboard_current: "{{ zabbix_dashboard_page.widgets | selectattr('widgetid', 'equalto', zabbix_dashboard_widget.widgetid) | first }}"
+    zabbix_dashboard_new_widget_:
+      widgetid: "{{ zabbix_dashboard_widget.widgetid }}"
+      type: "{{ zabbix_dashboard_widget.type }}"
+      name: "{{ zabbix_dashboard_widget.name }}"
+      x: "{{ zabbix_dashboard_widget.x }}"
+      y: "{{ zabbix_dashboard_widget.y }}"
+      width: "{{ zabbix_dashboard_widget.width }}"
+      height: "{{ zabbix_dashboard_widget.height }}"
+      view_mode: "{{ zabbix_dashboard_widget.view_mode }}"
+      fields: "{{ lookup('ansible.builtin.template', 'tophosts_fields.yml.j2') | from_yaml }}"
+
+- name: ダッシュボード更新
+  ansible.builtin.uri:
+    url: "{{ zabbix_dashboard_api_url }}"
+    method: POST
+    use_proxy: false
+    headers:
+      Authorization: "Bearer {{ zabbix_dashboard_api_token }}"
+    body_format: json
+    body:
+      jsonrpc: "2.0"
+      method: dashboard.update
+      params:
+        dashboardid: "{{ zabbix_dashboard_get.json.result[0].dashboardid }}"
+        pages:
+          - dashboard_pageid: "{{ zabbix_dashboard_get.json.result[0].pages[0].dashboard_pageid }}"
+            widgets: "{{ zabbix_dashboard_widgets }}"
+      id: 1
+  register: zabbix_dashboard_update
+  when: zabbix_dashboard_changed | bool
+  changed_when: true
+  failed_when: zabbix_dashboard_update.json is not defined or zabbix_dashboard_update.json.error is defined

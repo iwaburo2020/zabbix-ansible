@@ -1,0 +1,62 @@
+---
+# Zabbix API の接続先(inventory の zabbix_server = raspberrypi-zabbix)
+# API トークンはリポジトリに含めず、humidai002 の ~/.zabbix_api_token(権限 600)から読み込む
+zabbix_dashboard_api_url: "http://{{ hostvars['raspberrypi-zabbix'].ansible_host }}/zabbix/api_jsonrpc.php"
+zabbix_dashboard_api_token: "{{ lookup('ansible.builtin.file', lookup('ansible.builtin.env', 'HOME') + '/.zabbix_api_token') }}"
+
+# 編集するダッシュボード
+zabbix_dashboard_name: Global view
+
+# 編集するウィジェット(Global view の初期データ「Top hosts by CPU utilization」、widgetid 1)
+#   位置・大きさは初期データのまま。対象は全ホスト(サーバー19台、NW機器3台)、ホスト名順
+#   maintenance: 1 = メンテナンス中のホスト(gps001b の定期再起動中など)も表示する
+#   reference  : 初期データの値を引き継ぐ
+zabbix_dashboard_widget:
+  widgetid: "1"
+  type: tophosts
+  name: サーバー・NW機器の状態
+  x: "0"
+  y: "0"
+  width: "24"
+  height: "4"
+  view_mode: "0"
+  maintenance: "1"
+  show_lines: "25"
+  order_column: "0"
+  reference: NLVMO
+
+# 表の列(左から順)
+#   item       : アイテム名(全ホストで同じ名前のアイテムの値を表示。アイテムが無いホストは空欄)
+#   decimals   : 小数点以下の桁数
+#   base_color : 背景色(しきい値未満のとき)
+#   thresholds : しきい値以上のときの背景色
+zabbix_dashboard_columns:
+  - name: ホスト名
+  - name: 死活(ICMP)
+    item: ICMP ping
+    decimals: "0"
+    base_color: FF4000                       # 0(Down)は赤
+    thresholds:
+      - {threshold: "1", color: 4CAF50}      # 1(Up)は緑
+  - name: CPU使用率
+    item: CPU utilization
+    decimals: "1"
+    thresholds: "{{ zabbix_dashboard_util_thresholds }}"
+  - name: メモリ使用率
+    item: Memory utilization
+    decimals: "1"
+    thresholds: "{{ zabbix_dashboard_util_thresholds }}"
+  - name: ディスク使用率(/)
+    item: "FS [/]: Space: Used, in %"
+    decimals: "1"
+    thresholds: "{{ zabbix_dashboard_util_thresholds }}"
+  - name: ディスク使用率(C:)
+    item: "FS [Windows7_OS(C:)]: Space: Used, in %"
+    decimals: "1"
+    thresholds: "{{ zabbix_dashboard_util_thresholds }}"
+
+# 使用率のしきい値(初期データの「Top hosts by CPU utilization」と同じ値・色)
+zabbix_dashboard_util_thresholds:
+  - {threshold: "50", color: FFFF00}
+  - {threshold: "80", color: FF8000}
+  - {threshold: "90", color: FF4000}
