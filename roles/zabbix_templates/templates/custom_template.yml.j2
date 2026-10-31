@@ -32,7 +32,7 @@ zabbix_export:
           value_type: LOG
           triggers:
             - uuid: {{ uuid4(t ~ '/' ~ key ~ '/trigger') }}
-              expression: {{ ('count(/' ~ t ~ '/' ~ key ~ ',' ~ zabbix_log_window ~ ')>0') | to_json }}
+              expression: {{ ('nodata(/' ~ t ~ '/' ~ key ~ ',' ~ zabbix_log_window ~ ')=0') | to_json }}
               name: {{ ('Log message detected in ' ~ f) | to_json }}
               priority: WARNING
 {% endfor %}
@@ -45,7 +45,7 @@ zabbix_export:
           value_type: LOG
           triggers:
             - uuid: {{ uuid4(t ~ '/' ~ key ~ '/trigger') }}
-              expression: {{ ('count(/' ~ t ~ '/' ~ key ~ ',' ~ zabbix_log_window ~ ')>0') | to_json }}
+              expression: {{ ('nodata(/' ~ t ~ '/' ~ key ~ ',' ~ zabbix_log_window ~ ')=0') | to_json }}
               name: {{ ('Eventlog ' ~ l ~ ' error detected') | to_json }}
               priority: WARNING
 {% endfor %}
