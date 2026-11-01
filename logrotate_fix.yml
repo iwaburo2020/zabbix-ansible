@@ -1,0 +1,33 @@
+---
+# logrotate の退避ファイル /etc/logrotate.d/rsyslog.org を /etc/logrotate.d.org/ へ移動する
+# logrotate は /etc/logrotate.d 内のファイルをすべて読み込むため、退避ファイルと
+# /etc/logrotate.d/rsyslog の定義が重複し、logrotate.service が失敗する(2026-10-25 確認)
+# 退避ファイルの内容は変更せず、/etc/logrotate.d/rsyslog(使用中の設定)も変更しない
+# 実行(raspberrypi-desktop 以外):ansible-playbook logrotate_fix.yml -l 'all:!raspberrypi-desktop'
+# 実行(raspberrypi-desktop):ansible-playbook logrotate_fix.yml -l raspberrypi-desktop
+# rsyslog.org が /etc/logrotate.d にある場合だけ移動するため、再実行しても changed=0 になる
+
+- name: logrotate の退避ファイル rsyslog.org を /etc/logrotate.d の外へ移動する
+  hosts: "all:!zabbix_agent_windows"
+  become: true
+  gather_facts: false
+  tasks:
+    - name: /etc/logrotate.d/rsyslog.org の有無を確認
+      ansible.builtin.stat:
+        path: /etc/logrotate.d/rsyslog.org
+      register: rsyslog_org
+
+    - name: 移動先ディレクトリ /etc/logrotate.d.org を作成
+      ansible.builtin.file:
+        path: /etc/logrotate.d.org
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      when: rsyslog_org.stat.exists
+
+    - name: rsyslog.org を /etc/logrotate.d.org へ移動
+      ansible.builtin.command: mv /etc/logrotate.d/rsyslog.org /etc/logrotate.d.org/rsyslog.org
+      args:
+        creates: /etc/logrotate.d.org/rsyslog.org
+      when: rsyslog_org.stat.exists
