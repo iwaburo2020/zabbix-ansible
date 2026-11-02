@@ -98,3 +98,6 @@ gps001b の定期運用(OS 再起動と gpsd 停止)の時間帯に障害を抑�
 | 2026-11-01 | logrotate の失敗(17台):初期構築時の退避ファイル /etc/logrotate.d/rsyslog.org と /etc/logrotate.d/rsyslog の定義が重複していたため、rsyslog.org を /etc/logrotate.d.org/ へ移動 | logrotate_fix.yml |
 | 2026-11-02 | logrotate の失敗(raspberrypi-desktop):/etc/logrotate.d/rsyslog・rsyslog-custom の su syslog adm(グループ adm では /var/log に書き込めない)の行を削除。rsyslog は OS 標準の内容に戻った | logrotate_error_fix.yml |
 | 2026-11-02 | logrotate 実行時の squid の ERROR の行(proxy001b):/etc/squid/squid.conf の logformat combined(組み込みの書式の再定義で、squid は無視していた)の行を削除 | logrotate_error_fix.yml |
+| 2026-11-02 | squid の DNS エラー(proxy001b):pwm-image.trendmicro.com・pwm-cdn.trendmicro.com は宛先側の DNS に A レコードが無く(CloudFront への CNAME のみ)、squid が DNS failure の ERROR を出していたため、/etc/squid/squid.conf の「http_access allow lan」の直前に、2 つのホスト名への要求を DNS で調べる前に拒否する「acl dns_nodata_dst dstdomain …」と「http_access deny dns_nodata_dst」を追加 | proxy001b の /etc/squid/squid.conf(手作業で変更。別チャット「squid DNS エラー対応」) |
+
+- 未対応: proxy001b の ipv6.msftconnecttest.com の DNS エラー(2026-11-02 09:33:07 に 1 件)
