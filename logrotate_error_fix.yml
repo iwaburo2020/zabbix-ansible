@@ -1,0 +1,51 @@
+---
+# logrotate の実行時に出るエラーの対応(2026-11-02 確認)
+# raspberrypi-desktop: /etc/logrotate.d/rsyslog と rsyslog-custom の「su syslog adm」の行を削除する
+#   su syslog adm(グループ adm)では /var/log(グループ syslog だけが書き込める)に書き込めず、
+#   logrotate が Permission denied で失敗する。削除後は /etc/logrotate.conf の「su root adm」(OS標準)が適用される
+#   /etc/logrotate.d/rsyslog は、この削除で OS 標準の内容に戻る
+# proxy001b: /etc/squid/squid.conf の「logformat combined …」の行を削除する
+#   combined は squid の組み込みの書式のため、この行は無視されており、squid が設定を読み込むたびに ERROR の行が出る
+# 変更前のファイルは、日付付きの名前でコピーしてから変更する(logrotate のコピーは /etc/logrotate.d の外に置く)
+# 実行(raspberrypi-desktop):ansible-playbook logrotate_error_fix.yml -l raspberrypi-desktop
+# 実行(proxy001b):ansible-playbook logrotate_error_fix.yml -l proxy001b
+
+- name: raspberrypi-desktop の logrotate の設定から su syslog adm を削除する
+  hosts: raspberrypi-desktop
+  become: true
+  gather_facts: false
+  vars:
+    logrotate_su_files: [rsyslog, rsyslog-custom]
+  tasks:
+    - name: 変更前のファイルを /etc/logrotate.d.org にコピー
+      ansible.builtin.copy:
+        src: "/etc/logrotate.d/{{ item }}"
+        dest: "/etc/logrotate.d.org/{{ item }}.bk20261102"
+        remote_src: true
+        force: false
+      loop: "{{ logrotate_su_files }}"
+
+    - name: su syslog adm の行を削除
+      ansible.builtin.lineinfile:
+        path: "/etc/logrotate.d/{{ item }}"
+        regexp: '^\s*su\s+syslog\s+adm\s*$'
+        state: absent
+      loop: "{{ logrotate_su_files }}"
+
+- name: proxy001b の squid.conf から logformat combined を削除する
+  hosts: proxy001b
+  become: true
+  gather_facts: false
+  tasks:
+    - name: 変更前の squid.conf をコピー
+      ansible.builtin.copy:
+        src: /etc/squid/squid.conf
+        dest: /etc/squid/squid.conf.bk20261102
+        remote_src: true
+        force: false
+
+    - name: logformat combined の行を削除
+      ansible.builtin.lineinfile:
+        path: /etc/squid/squid.conf
+        regexp: '^logformat\s+combined\s'
+        state: absent
