@@ -77,8 +77,24 @@ gps001b の定期運用(OS 再起動と gpsd 停止)の時間帯に障害を抑�
 | proxyvm001b の自動起動サービス4件 | GoogleUpdater 2件、LMS、BtLockerService(停止が正常) | ホストマクロ {$SERVICE.NAME.NOT_MATCHES} で自動検出から除外 |
 | gps001b の定期運用の時間帯 | OS 再起動・gpsd 停止 | メンテナンス期間 gps001b-reboot で抑制 |
 
-## 7. 現在の状態(2026-10-25 時点)
+## 7. 現在の状態(2026-11-02 時点)
 
 - 全22台を登録。SNMP 3台は取得可能、ICMP は全台取得可能
-- 取得不可のアイテム 13件: backup001 の usb0 と wap001b の wlan0 の speed、Zabbix server の内部プロセス 11件(内容は未調査)
-- Log message detected の障害が複数のホストで発生している(2章の条件どおりの動作。内容の解析は未実施)
+
+### 7.1 取得不可のアイテム(13件、対応しない)
+
+| ホスト | 件数 | アイテム | 原因(エラーメッセージで確認) |
+|---|---|---|---|
+| Zabbix server | 10 | connector manager・connector worker・ipmi manager・ipmi poller・java poller・report manager・report writer・snmp trapper・vmware collector の稼働率、vmware buffer | 該当するプロセスが起動していない(No "…" processes started) |
+| Zabbix server | 1 | zabbix[connector_queue] | connector が起動していない(StartConnectors 未設定) |
+| backup001 | 1 | /sys/class/net/usb0/speed | カーネルが速度を返さない(invalid argument) |
+| wap001b | 1 | /sys/class/net/wlan0/speed | カーネルが速度を返さない(invalid argument) |
+
+### 7.2 Log message detected の対応
+
+| 日付 | 内容 | 定義 |
+|---|---|---|
+| 2026-10-31 | トリガーの式を count(…,10m)>0 から nodata(…,10m)=0 に変更。2章のとおり、10分間新しい行が無ければ障害は自動で解決する(変更前は新しい行が来ない間は再計算されず、障害のまま残っていた) | roles/zabbix_templates/templates/custom_template.yml.j2 |
+| 2026-11-01 | logrotate の失敗(17台):初期構築時の退避ファイル /etc/logrotate.d/rsyslog.org と /etc/logrotate.d/rsyslog の定義が重複していたため、rsyslog.org を /etc/logrotate.d.org/ へ移動 | logrotate_fix.yml |
+| 2026-11-02 | logrotate の失敗(raspberrypi-desktop):/etc/logrotate.d/rsyslog・rsyslog-custom の su syslog adm(グループ adm では /var/log に書き込めない)の行を削除。rsyslog は OS 標準の内容に戻った | logrotate_error_fix.yml |
+| 2026-11-02 | logrotate 実行時の squid の ERROR の行(proxy001b):/etc/squid/squid.conf の logformat combined(組み込みの書式の再定義で、squid は無視していた)の行を削除 | logrotate_error_fix.yml |
