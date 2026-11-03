@@ -55,7 +55,7 @@
 | web001b | バックアップ 毎月1日 | 1日と15日 |
 | web002b | バックアップ 5:00(毎月1日) | 5:30(1日と15日) |
 | ntp004 | バックアップ 4:30 | 定義なし |
-| backup001 | バックアップ 1:00 | 1:50 |
+| backup001 | バックアップ 1:00 | 1:50(root の crontab で `backup_file.sh` を実行) |
 | proxy001b | (記載なし) | 第4土曜の翌日の再起動の前にも `make_flagfile.sh` を実行(他のホストは第2土曜の翌日と1日のみ) |
 | humidai001b、humidai002 | パッケージ更新・再起動 第2土曜・第4土曜 | 毎週土曜(パッケージ更新 12:00、再起動 23:59)。従来どおりとする |
 
@@ -82,7 +82,7 @@
 | proxy001b | `/home/script/chk_umnt.sh` を毎週日曜 4:50、`/home/script/chk_mnt.sh` を毎週日曜 5:10 |
 | gps001b | `/usr/local/script/system_restart.sh` を毎時59分 |
 | logbackup001 | `/usr/bin/chronyc makestep` を30分ごと |
-| backup001 | NFS ブートのホストのバックアップ(`backup_file_nfs.sh`):ntp002 3:30、ntp003 4:00、web001 5:00、web002 5:30(毎月1日)、web001 5:00、web002 5:30(毎月15日) |
+| backup001 | root の crontab で、NFS ブートのホストのバックアップ(`backup_file_nfs.sh`)を実行:ntp002 3:30、ntp003 4:00、web001 5:00、web002 5:30(毎月1日)、web001 5:00、web002 5:30(毎月15日) |
 
 ## 7. OS 標準・パッケージ由来の定義(変更しない)
 
