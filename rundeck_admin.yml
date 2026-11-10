@@ -1,0 +1,13 @@
+---
+# Rundeck の管理ユーザー admin のパスワード変更(raspberrypi-desktop)
+# 前提: rundeck_server.yml 実行済み
+# 実行: ansible-playbook rundeck_admin.yml
+- name: rundeck_admin
+  hosts: raspberrypi-desktop
+  vars_prompt:
+    - name: rundeck_admin_password
+      prompt: "Rundeck の admin の新しいパスワード(カンマ不可)"
+      private: true
+      confirm: true
+  roles:
+    - rundeck_admin

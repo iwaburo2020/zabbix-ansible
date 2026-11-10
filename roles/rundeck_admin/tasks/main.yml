@@ -1,0 +1,29 @@
+---
+# Rundeck の管理ユーザー admin のパスワード変更
+# /etc/rundeck/realm.properties の admin の行を書き換える(権限の並びは初期値のまま)
+
+- name: realm.properties 退避(初回のみ)
+  ansible.builtin.command: cp -p /etc/rundeck/realm.properties /etc/rundeck/realm.properties.org
+  args:
+    creates: /etc/rundeck/realm.properties.org
+
+- name: admin のパスワード設定
+  ansible.builtin.lineinfile:
+    path: /etc/rundeck/realm.properties
+    regexp: '^admin:'
+    line: "admin:{{ rundeck_admin_password }},user,admin,architect,deploy,build"
+  notify: Rundeck 再起動
+  no_log: true
+
+- name: 設定反映
+  ansible.builtin.meta: flush_handlers
+
+- name: ログイン画面の応答確認(再起動後は1分ほどかかる)
+  ansible.builtin.uri:
+    url: http://127.0.0.1:4440/user/login
+    use_proxy: false
+    status_code: 200
+  register: rd_login_chk
+  until: rd_login_chk.status == 200
+  retries: 60
+  delay: 10
