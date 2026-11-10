@@ -1,0 +1,100 @@
+---
+# Rundeck のプロジェクト作成と、ノード定義(inventory.yml のグループ rundeck_nodes)の登録
+# 前提: rundeck_ssh.yml、rundeck_api_token.yml 実行済み
+# 実行: ansible-playbook rundeck_project.yml
+- name: rundeck_project
+  hosts: raspberrypi-desktop
+  gather_facts: false
+  vars:
+    rundeck_project_name: infra
+    rundeck_project_description: "Scheduled jobs for servers (package update, reboot, backup)"
+    rundeck_nodes_file: "/var/lib/rundeck/projects/{{ rundeck_project_name }}/etc/resources.yaml"
+    rundeck_api_url: http://127.0.0.1:4440/api/60
+    rundeck_api_token: "{{ lookup('ansible.builtin.file', lookup('ansible.builtin.env', 'HOME') + '/.rundeck_api_token') }}"
+  tasks:
+    - name: ノード定義ファイルの置き場所を作成
+      ansible.builtin.file:
+        path: "{{ rundeck_nodes_file | dirname }}"
+        state: directory
+        owner: rundeck
+        group: rundeck
+        mode: "0750"
+
+    - name: ノード定義ファイルの配置(rundeck_nodes のホストを inventory の接続先・ユーザー・ポートで書き出す)
+      ansible.builtin.copy:
+        dest: "{{ rundeck_nodes_file }}"
+        content: |
+          # Rundeck nodes (managed by Ansible, generated from inventory group rundeck_nodes)
+          {% for h in groups['rundeck_nodes'] %}
+          {{ h }}:
+            nodename: {{ h }}
+            hostname: "{{ hostvars[h].ansible_host }}{{ (':' ~ hostvars[h].ansible_port) if hostvars[h].ansible_port is defined else '' }}"
+            username: {{ hostvars[h].ansible_user }}
+            osFamily: unix
+          {% endfor %}
+        owner: rundeck
+        group: rundeck
+        mode: "0640"
+
+    - name: プロジェクトの有無を確認
+      ansible.builtin.uri:
+        url: "{{ rundeck_api_url }}/project/{{ rundeck_project_name }}"
+        use_proxy: false
+        headers:
+          X-Rundeck-Auth-Token: "{{ rundeck_api_token }}"
+          Accept: application/json
+        status_code: [200, 404]
+      register: rd_project_chk
+      no_log: true
+
+    - name: プロジェクトの作成(無い場合のみ)
+      ansible.builtin.uri:
+        url: "{{ rundeck_api_url }}/projects"
+        method: POST
+        use_proxy: false
+        headers:
+          X-Rundeck-Auth-Token: "{{ rundeck_api_token }}"
+          Accept: application/json
+        body_format: json
+        body:
+          name: "{{ rundeck_project_name }}"
+          description: "{{ rundeck_project_description }}"
+          config:
+            resources.source.1.type: file
+            resources.source.1.config.file: "{{ rundeck_nodes_file }}"
+            resources.source.1.config.format: resourceyaml
+            resources.source.1.config.requireFileExists: "true"
+            resources.source.1.config.includeServerNode: "false"
+            service.NodeExecutor.default.provider: sshj-ssh
+            service.FileCopier.default.provider: sshj-scp
+            project.ssh-authentication: privateKey
+            project.ssh-keypath: /var/lib/rundeck/.ssh/id_rsa
+        status_code: [201, 400, 403, 409, 500]
+        return_content: true
+      register: rd_project_create
+      when: rd_project_chk.status == 404
+      changed_when: rd_project_create.status == 201
+      no_log: true
+
+    - name: プロジェクトの作成結果の確認(失敗時は Rundeck の応答を表示)
+      ansible.builtin.assert:
+        that: rd_project_create.status == 201
+        fail_msg: "status={{ rd_project_create.status }} {{ rd_project_create.content | default('') }}"
+        quiet: true
+      when: rd_project_chk.status == 404
+
+    - name: 登録されたノードの取得
+      ansible.builtin.uri:
+        url: "{{ rundeck_api_url }}/project/{{ rundeck_project_name }}/resources?format=json"
+        use_proxy: false
+        headers:
+          X-Rundeck-Auth-Token: "{{ rundeck_api_token }}"
+          Accept: application/json
+        status_code: [200, 403, 404, 500]
+        return_content: true
+      register: rd_nodes_chk
+      no_log: true
+
+    - name: 登録されたノードの表示
+      ansible.builtin.debug:
+        msg: "status={{ rd_nodes_chk.status }} {{ rd_nodes_chk.json | default(rd_nodes_chk.content) }}"
