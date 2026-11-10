@@ -1,0 +1,63 @@
+---
+# Rundeck から rundeck_nodes の各ノードへコマンドを実行できるかの確認(設定は変更しない)
+# プロジェクトの全ノードで hostname を実行し、結果を表示する
+# 前提: rundeck_project.yml 実行済み
+# 実行: ansible-playbook rundeck_node_check.yml
+- name: rundeck_node_check
+  hosts: raspberrypi-desktop
+  gather_facts: false
+  become: false
+  vars:
+    rundeck_project_name: infra
+    rundeck_check_command: hostname
+    rundeck_api_url: http://127.0.0.1:4440/api/60
+    rundeck_api_token: "{{ lookup('ansible.builtin.file', lookup('ansible.builtin.env', 'HOME') + '/.rundeck_api_token') }}"
+  tasks:
+    - name: Rundeck にコマンドの実行を依頼(プロジェクトの全ノードが対象)
+      ansible.builtin.uri:
+        url: "{{ rundeck_api_url }}/project/{{ rundeck_project_name }}/run/command"
+        method: POST
+        use_proxy: false
+        headers:
+          X-Rundeck-Auth-Token: "{{ rundeck_api_token }}"
+          Accept: application/json
+        body_format: json
+        body:
+          project: "{{ rundeck_project_name }}"
+          exec: "{{ rundeck_check_command }}"
+          filter: "name: .*"
+        status_code: [200, 400, 403, 404, 500]
+        return_content: true
+      register: rd_run
+      no_log: true
+
+    - name: 実行依頼の結果の確認(失敗時は Rundeck の応答を表示)
+      ansible.builtin.assert:
+        that: rd_run.status == 200
+        fail_msg: "status={{ rd_run.status }} {{ rd_run.content | default('') }}"
+        quiet: true
+
+    - name: 実行の完了待ちと出力の取得
+      ansible.builtin.uri:
+        url: "{{ rundeck_api_url }}/execution/{{ rd_run.json.execution.id }}/output?format=json"
+        use_proxy: false
+        headers:
+          X-Rundeck-Auth-Token: "{{ rundeck_api_token }}"
+          Accept: application/json
+        status_code: 200
+        return_content: true
+      register: rd_out
+      until: rd_out.json.execCompleted | default(false)
+      retries: 30
+      delay: 2
+      no_log: true
+
+    - name: 実行結果の表示
+      ansible.builtin.debug:
+        msg: "実行番号={{ rd_run.json.execution.id }} 状態={{ rd_out.json.execState }} 出力={{ rd_out.json.entries | map(attribute='log') | list }}"
+
+    - name: 実行結果の判定(状態が succeeded であること)
+      ansible.builtin.assert:
+        that: rd_out.json.execState == 'succeeded'
+        fail_msg: "Rundeck からのコマンド実行が成功しませんでした(状態={{ rd_out.json.execState }})"
+        quiet: true
