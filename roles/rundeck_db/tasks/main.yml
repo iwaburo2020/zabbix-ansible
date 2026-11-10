@@ -1,0 +1,50 @@
+---
+# Rundeck用データベース作成(PostgreSQL)
+# 公式手順(Using Postgres as a database backend)の SQL と同じ内容を実行する
+# postgresql.conf と pg_hba.conf は変更しない。PostgreSQL の再起動もしない
+
+- name: DBユーザー存在確認
+  ansible.builtin.command:
+    argv: [runuser, -u, postgres, --, psql, -tAc, "SELECT 1 FROM pg_roles WHERE rolname='{{ rundeck_db_user }}'"]
+  register: rd_role_chk
+  changed_when: false
+
+- name: DBユーザー作成(公式手順 create user ... with password)
+  ansible.builtin.command:
+    argv: [runuser, -u, postgres, --, psql, -v, ON_ERROR_STOP=1]
+    stdin: "CREATE USER {{ rundeck_db_user }} WITH PASSWORD '{{ rundeck_db_password }}';"
+  when: rd_role_chk.stdout != "1"
+  no_log: true
+
+- name: DB存在確認
+  ansible.builtin.command:
+    argv: [runuser, -u, postgres, --, psql, -tAc, "SELECT 1 FROM pg_database WHERE datname='{{ rundeck_db_name }}'"]
+  register: rd_db_chk
+  changed_when: false
+
+- name: DB作成(公式手順 create database)
+  ansible.builtin.command:
+    argv: [runuser, -u, postgres, --, psql, -v, ON_ERROR_STOP=1, -c, "CREATE DATABASE {{ rundeck_db_name }}"]
+  when: rd_db_chk.stdout != "1"
+
+- name: データベース権限の確認
+  ansible.builtin.command:
+    argv: [runuser, -u, postgres, --, psql, -tAc, "SELECT has_database_privilege('{{ rundeck_db_user }}', '{{ rundeck_db_name }}', 'CREATE')"]
+  register: rd_dbpriv_chk
+  changed_when: false
+
+- name: データベース権限の付与(公式手順 grant ALL privileges on database)
+  ansible.builtin.command:
+    argv: [runuser, -u, postgres, --, psql, -v, ON_ERROR_STOP=1, -c, "GRANT ALL PRIVILEGES ON DATABASE {{ rundeck_db_name }} TO {{ rundeck_db_user }}"]
+  when: rd_dbpriv_chk.stdout != "t"
+
+- name: public スキーマ権限の確認
+  ansible.builtin.command:
+    argv: [runuser, -u, postgres, --, psql, -d, "{{ rundeck_db_name }}", -tAc, "SELECT has_schema_privilege('{{ rundeck_db_user }}', 'public', 'CREATE')"]
+  register: rd_schpriv_chk
+  changed_when: false
+
+- name: public スキーマ権限の付与(公式手順 grant ALL privileges on schema public)
+  ansible.builtin.command:
+    argv: [runuser, -u, postgres, --, psql, -d, "{{ rundeck_db_name }}", -v, ON_ERROR_STOP=1, -c, "GRANT ALL PRIVILEGES ON SCHEMA public TO {{ rundeck_db_user }}"]
+  when: rd_schpriv_chk.stdout != "t"

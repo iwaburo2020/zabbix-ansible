@@ -1,0 +1,4 @@
+---
+# Rundeck用データベース(Zabbix とは別のデータベース)
+rundeck_db_name: rundeck
+rundeck_db_user: rundeck

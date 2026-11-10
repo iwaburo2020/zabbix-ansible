@@ -1,0 +1,12 @@
+---
+# Rundeck用データベース作成(raspberrypi-desktop の既存 PostgreSQL)
+# 実行: ansible-playbook rundeck_db.yml
+- name: rundeck_db
+  hosts: raspberrypi-desktop
+  vars_prompt:
+    - name: rundeck_db_password
+      prompt: "Rundeck DBユーザーのパスワード(シングルクォート不可)"
+      private: true
+      confirm: true
+  roles:
+    - rundeck_db
