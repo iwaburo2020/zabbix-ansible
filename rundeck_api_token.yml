@@ -1,0 +1,68 @@
+---
+# Rundeck の API トークンの設定(raspberrypi-desktop)
+# トークンはリポジトリに含めず、humidai002 の ~/.rundeck_api_token(権限 600)から読み込む
+# 前提: rundeck_server.yml 実行済み
+# 実行: ansible-playbook rundeck_api_token.yml
+- name: rundeck_api_token
+  hosts: raspberrypi-desktop
+  gather_facts: false
+  vars:
+    rundeck_api_token: "{{ lookup('ansible.builtin.file', lookup('ansible.builtin.env', 'HOME') + '/.rundeck_api_token') }}"
+  tasks:
+    - name: トークン定義ファイルの配置
+      ansible.builtin.copy:
+        dest: /etc/rundeck/tokens.properties
+        content: |
+          # Rundeck static API token (managed by Ansible). format: username: token,role
+          admin: {{ rundeck_api_token }},admin
+        owner: rundeck
+        group: rundeck
+        mode: "0640"
+      no_log: true
+      notify: Rundeck 再起動
+
+    - name: framework.properties 退避(初回のみ)
+      ansible.builtin.command: cp -p /etc/rundeck/framework.properties /etc/rundeck/framework.properties.org
+      args:
+        creates: /etc/rundeck/framework.properties.org
+
+    - name: トークン定義ファイルの場所を設定
+      ansible.builtin.lineinfile:
+        path: /etc/rundeck/framework.properties
+        regexp: '^rundeck\.tokens\.file\s*='
+        line: "rundeck.tokens.file=/etc/rundeck/tokens.properties"
+      notify: Rundeck 再起動
+
+    - name: 設定反映
+      ansible.builtin.meta: flush_handlers
+
+    - name: ログイン画面の応答確認(再起動後は1分ほどかかる)
+      ansible.builtin.uri:
+        url: http://127.0.0.1:4440/user/login
+        use_proxy: false
+        status_code: 200
+      register: rd_login_chk
+      until: rd_login_chk.status == 200
+      retries: 60
+      delay: 10
+
+    - name: API トークンでの接続確認(システム情報の取得)
+      ansible.builtin.uri:
+        url: http://127.0.0.1:4440/api/60/system/info
+        use_proxy: false
+        headers:
+          X-Rundeck-Auth-Token: "{{ rundeck_api_token }}"
+          Accept: application/json
+        status_code: 200
+      register: rd_api_chk
+      no_log: true
+
+    - name: 接続確認の結果表示
+      ansible.builtin.debug:
+        msg: "API 応答 status={{ rd_api_chk.status }} / Rundeck {{ rd_api_chk.json.get('system', {}).get('rundeck', {}).get('version', '不明') }}"
+
+  handlers:
+    - name: Rundeck 再起動
+      ansible.builtin.systemd_service:
+        name: rundeckd
+        state: restarted
