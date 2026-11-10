@@ -1,0 +1,12 @@
+---
+# Rundeck 本体の導入(raspberrypi-desktop)
+# 前提: rundeck_db.yml 実行済み
+# 実行: ansible-playbook rundeck_server.yml
+- name: rundeck_server
+  hosts: raspberrypi-desktop
+  vars_prompt:
+    - name: rundeck_db_password
+      prompt: "Rundeck DBユーザーのパスワード(rundeck_db.yml で設定したもの)"
+      private: true
+  roles:
+    - rundeck_server

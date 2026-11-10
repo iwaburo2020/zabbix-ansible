@@ -1,0 +1,14 @@
+---
+# Java(公式手順と同じ 17)
+rundeck_java_package: openjdk-17-jre-headless
+
+# ブラウザーで開く URL
+rundeck_server_url: "http://{{ ansible_host }}:4440"
+
+# データベース(rundeck_db.yml で作成したもの)
+rundeck_db_host: 127.0.0.1
+rundeck_db_name: rundeck
+rundeck_db_user: rundeck
+
+# true: rundeck パッケージを固定し、定期パッケージ更新の対象から外す
+rundeck_hold: true

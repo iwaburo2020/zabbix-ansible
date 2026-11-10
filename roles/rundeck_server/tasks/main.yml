@@ -1,0 +1,105 @@
+---
+# Rundeck 本体の導入
+# 公式手順(Installing on Ubuntu or Debian Linux distributions)に沿う
+# apt-key が Ubuntu 26.04 に無いため、署名鍵は /etc/apt/keyrings に置き signed-by で指定する
+
+- name: Java 導入
+  ansible.builtin.apt:
+    name: "{{ rundeck_java_package }}"
+    state: present
+    update_cache: true
+
+- name: 署名鍵の取得(プロキシ経由)
+  ansible.builtin.get_url:
+    url: https://packages.rundeck.com/pagerduty/rundeck/gpgkey
+    dest: /etc/apt/keyrings/rundeck.asc
+    owner: root
+    group: root
+    mode: "0644"
+    force: false
+  environment: "{{ zabbix_proxy_env }}"
+
+- name: リポジトリ定義の配置
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/rundeck.list
+    content: |
+      # Rundeck(Ansible管理)
+      deb [signed-by=/etc/apt/keyrings/rundeck.asc] https://packages.rundeck.com/pagerduty/rundeck/any/ any main
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Rundeck 導入
+  ansible.builtin.apt:
+    name: rundeck
+    state: present
+    update_cache: true
+
+- name: rundeck パッケージの固定(定期パッケージ更新の対象にするかどうか)
+  ansible.builtin.dpkg_selections:
+    name: rundeck
+    selection: "{{ 'hold' if rundeck_hold else 'install' }}"
+
+- name: rundeck-config.properties 退避(初回のみ)
+  ansible.builtin.command: cp -p /etc/rundeck/rundeck-config.properties /etc/rundeck/rundeck-config.properties.org
+  args:
+    creates: /etc/rundeck/rundeck-config.properties.org
+
+- name: 画面の URL 設定
+  ansible.builtin.lineinfile:
+    path: /etc/rundeck/rundeck-config.properties
+    regexp: '^grails\.serverURL\s*='
+    line: "grails.serverURL={{ rundeck_server_url }}"
+  notify: Rundeck 再起動
+
+- name: データベース接続先の設定(組み込み DB から PostgreSQL へ)
+  ansible.builtin.lineinfile:
+    path: /etc/rundeck/rundeck-config.properties
+    regexp: '^dataSource\.url\s*='
+    line: "dataSource.url = jdbc:postgresql://{{ rundeck_db_host }}:5432/{{ rundeck_db_name }}"
+  notify: Rundeck 再起動
+
+- name: データベースのドライバー設定
+  ansible.builtin.lineinfile:
+    path: /etc/rundeck/rundeck-config.properties
+    regexp: '^dataSource\.driverClassName\s*='
+    line: "dataSource.driverClassName = org.postgresql.Driver"
+    insertafter: '^dataSource\.dbCreate'
+  notify: Rundeck 再起動
+
+- name: データベースのユーザー設定
+  ansible.builtin.lineinfile:
+    path: /etc/rundeck/rundeck-config.properties
+    regexp: '^dataSource\.username\s*='
+    line: "dataSource.username={{ rundeck_db_user }}"
+    insertafter: '^dataSource\.url'
+  notify: Rundeck 再起動
+
+- name: データベースのパスワード設定
+  ansible.builtin.lineinfile:
+    path: /etc/rundeck/rundeck-config.properties
+    regexp: '^dataSource\.password\s*='
+    line: "dataSource.password={{ rundeck_db_password }}"
+    insertafter: '^dataSource\.username'
+  notify: Rundeck 再起動
+  no_log: true
+
+- name: 設定反映(起動前)
+  ansible.builtin.meta: flush_handlers
+
+- name: Rundeck 起動・自動起動
+  ansible.builtin.systemd_service:
+    name: rundeckd
+    state: started
+    enabled: true
+    daemon_reload: true
+
+- name: ログイン画面の応答確認(初回起動は数分かかる)
+  ansible.builtin.uri:
+    url: http://127.0.0.1:4440/user/login
+    use_proxy: false
+    status_code: 200
+  register: rd_login_chk
+  until: rd_login_chk.status == 200
+  retries: 60
+  delay: 10

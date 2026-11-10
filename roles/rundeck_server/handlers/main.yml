@@ -1,0 +1,6 @@
+---
+- name: Rundeck 再起動
+  ansible.builtin.systemd_service:
+    name: rundeckd
+    state: restarted
+    daemon_reload: true
