@@ -1,0 +1,48 @@
+---
+# Rundeck 用 SSH 鍵の作成と、ジョブ化するサーバーへの公開鍵の配布
+# 配布先は inventory.yml のグループ rundeck_nodes(ジョブ化するサーバーを順に追加していく)
+# 前提: rundeck_server.yml 実行済み
+# 実行: ansible-playbook rundeck_ssh.yml
+# BECOME password は ubuntu の sudo パスワード(raspberrypi-desktop でだけ使う。配布先では sudo を使わない)
+
+- name: rundeck_ssh(鍵の作成)
+  hosts: raspberrypi-desktop
+  gather_facts: false
+  tasks:
+    - name: Rundeck 用 SSH 鍵の作成(公式手順 ssh-keygen -t rsa -b 4096 -m PEM、パスフレーズなし)
+      ansible.builtin.command:
+        argv: [runuser, -u, rundeck, --, ssh-keygen, -q, -t, rsa, -b, "4096", -m, PEM, -N, "", -C, rundeck@raspberrypi-desktop, -f, /var/lib/rundeck/.ssh/id_rsa]
+        creates: /var/lib/rundeck/.ssh/id_rsa
+
+    - name: 公開鍵の読み取り
+      ansible.builtin.slurp:
+        src: /var/lib/rundeck/.ssh/id_rsa.pub
+      register: rd_pubkey
+
+- name: rundeck_ssh(公開鍵の配布)
+  hosts: rundeck_nodes
+  become: false
+  gather_facts: false
+  tasks:
+    - name: 公開鍵を接続ユーザーの authorized_keys に追加
+      ansible.builtin.lineinfile:
+        path: "/home/{{ ansible_user }}/.ssh/authorized_keys"
+        line: "{{ hostvars['raspberrypi-desktop'].rd_pubkey.content | b64decode | trim }}"
+
+- name: rundeck_ssh(接続確認)
+  hosts: raspberrypi-desktop
+  gather_facts: false
+  tasks:
+    - name: rundeck ユーザーから各サーバーへ SSH 接続し、sudo がパスワードなしで使えることを確認
+      ansible.builtin.command:
+        argv: [runuser, -u, rundeck, --, ssh, -i, /var/lib/rundeck/.ssh/id_rsa, -o, BatchMode=yes, -o, StrictHostKeyChecking=no, -o, UserKnownHostsFile=/dev/null, -o, LogLevel=ERROR, -o, ConnectTimeout=10, -p, "{{ hostvars[item].ansible_port | default(22) | string }}", "{{ hostvars[item].ansible_user }}@{{ hostvars[item].ansible_host }}", "hostname; sudo -n true && echo sudo-ok"]
+      loop: "{{ groups['rundeck_nodes'] }}"
+      register: rd_ssh_chk
+      changed_when: false
+
+    - name: 接続確認の結果表示
+      ansible.builtin.debug:
+        msg: "{{ item.item }}: {{ item.stdout_lines | join(' / ') }}"
+      loop: "{{ rd_ssh_chk.results }}"
+      loop_control:
+        label: "{{ item.item }}"
