@@ -1,0 +1,66 @@
+---
+# Rundeck のジョブ定義(プロジェクト infra)。書式は Rundeck のジョブ定義(JSON/YAML)と同じ
+# - schedule.crontab は Quartz 形式(秒 分 時 日 月 曜日 年)。7#2=第2土曜、7#4=第4土曜、L=月末日
+# - scheduleEnabled: false の間は、Rundeck は自動では実行しない(cron からの切り替え時に true にする)
+# - nodefilters.filter の対象を2台以上にするときは、nodefilters.dispatch.threadcount を台数以上にする
+#   (cron は各ホストが同時に実行するため)
+rundeck_jobs:
+  - name: update-2sat-1600
+    group: package
+    uuid: b9c1245d-a986-4fb7-a7a9-67f74c1a248d
+    description: "Package update (package_update.sh), 2nd Saturday 16:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: false
+    schedule:
+      crontab: "0 0 16 ? * 7#2 *"
+    nodefilters:
+      filter: "name: ntp004"
+      dispatch:
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "sudo /bin/sh -c /usr/local/script/package_update.sh > /dev/null"
+
+  - name: update-4sat-1600
+    group: package
+    uuid: 40f7a506-e88d-48a0-af5c-7f0970c110c3
+    description: "Package update (package_update.sh), 4th Saturday 16:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: false
+    schedule:
+      crontab: "0 0 16 ? * 7#4 *"
+    nodefilters:
+      filter: "name: ntp004"
+      dispatch:
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "sudo /bin/sh -c /usr/local/script/package_update.sh > /dev/null"
+
+  - name: fullupdate-eom-1600
+    group: package
+    uuid: 3234d80d-4021-44e9-b551-9160e725aac1
+    description: "Package full upgrade (package_fullupdate.sh), last day of month 16:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: false
+    schedule:
+      crontab: "0 0 16 L * ? *"
+    nodefilters:
+      filter: "name: ntp004"
+      dispatch:
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "sudo /bin/sh -c /usr/local/script/package_fullupdate.sh > /dev/null"

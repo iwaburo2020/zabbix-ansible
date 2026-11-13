@@ -1,0 +1,58 @@
+---
+# Rundeck のジョブ登録(vars/rundeck_jobs.yml の定義を API で登録・更新する)
+# 同じ uuid のジョブがあれば更新し、無ければ作成する。ジョブの実行はしない
+# 前提: rundeck_project.yml 実行済み
+# 実行: ansible-playbook rundeck_jobs.yml
+- name: rundeck_jobs
+  hosts: raspberrypi-desktop
+  gather_facts: false
+  become: false
+  vars_files:
+    - vars/rundeck_jobs.yml
+  vars:
+    rundeck_project_name: infra
+    rundeck_api_url: http://127.0.0.1:4440/api/60
+    rundeck_api_token: "{{ lookup('ansible.builtin.file', lookup('ansible.builtin.env', 'HOME') + '/.rundeck_api_token') }}"
+  tasks:
+    - name: ジョブ定義の登録・更新
+      ansible.builtin.uri:
+        url: "{{ rundeck_api_url }}/project/{{ rundeck_project_name }}/jobs/import?dupeOption=update&uuidOption=preserve"
+        method: POST
+        use_proxy: false
+        headers:
+          X-Rundeck-Auth-Token: "{{ rundeck_api_token }}"
+          Accept: application/json
+        body_format: json
+        body: "{{ rundeck_jobs }}"
+        status_code: [200, 400, 403, 404, 500]
+        return_content: true
+      register: rd_import
+      no_log: true
+
+    - name: 登録結果の表示
+      ansible.builtin.debug:
+        msg: "status={{ rd_import.status }} 成功={{ rd_import.json.succeeded | default([]) | map(attribute='name') | list }} 失敗={{ rd_import.json.failed | default([]) }} スキップ={{ rd_import.json.skipped | default([]) }}"
+
+    - name: 登録結果の判定(全ジョブが成功していること)
+      ansible.builtin.assert:
+        that:
+          - rd_import.status == 200
+          - (rd_import.json.succeeded | default([]) | length) == (rundeck_jobs | length)
+        fail_msg: "status={{ rd_import.status }} {{ rd_import.content | default('') }}"
+        quiet: true
+
+    - name: 登録されているジョブ定義の取得
+      ansible.builtin.uri:
+        url: "{{ rundeck_api_url }}/project/{{ rundeck_project_name }}/jobs/export?format=json"
+        use_proxy: false
+        headers:
+          X-Rundeck-Auth-Token: "{{ rundeck_api_token }}"
+          Accept: application/json
+        status_code: [200, 400, 403, 404, 500]
+        return_content: true
+      register: rd_export
+      no_log: true
+
+    - name: 登録されているジョブ定義の表示
+      ansible.builtin.debug:
+        msg: "status={{ rd_export.status }} {{ rd_export.json | default(rd_export.content) }}"
