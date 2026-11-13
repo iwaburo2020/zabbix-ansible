@@ -1,0 +1,47 @@
+---
+# Rundeck のジョブへ切り替えたホストの /etc/crontab で、
+# パッケージ更新の行(package_update.sh / package_fullupdate.sh)を行頭 # でコメントにする
+# 変更前に cp -p /etc/crontab /etc/crontab.bkYYYYMMDD(実行日)でコピーを取る
+# 実行: ansible-playbook rundeck_cron_package_off.yml -e cutover_hosts=<ホスト名>
+- name: rundeck_cron_package_off
+  hosts: "{{ cutover_hosts }}"
+  gather_facts: false
+  vars:
+    cron_expected_lines: 3
+    cron_backup: "/etc/crontab.bk{{ lookup('ansible.builtin.pipe', 'date +%Y%m%d') }}"
+  tasks:
+    - name: 有効なパッケージ更新の行を取得(変更前)
+      ansible.builtin.shell: grep -nE '^[^#]*/usr/local/script/package_(full)?update\.sh' /etc/crontab || true
+      register: cron_before
+      changed_when: false
+
+    - name: 有効なパッケージ更新の行を表示(変更前)
+      ansible.builtin.debug:
+        var: cron_before.stdout_lines
+
+    - name: 行数の確認(3行、またはコメント済みで0行)
+      ansible.builtin.assert:
+        that: (cron_before.stdout_lines | length) in [0, cron_expected_lines]
+        fail_msg: "有効なパッケージ更新の行が {{ cron_before.stdout_lines | length }} 行です(想定は {{ cron_expected_lines }} 行)。変更せずに中止します"
+        quiet: true
+
+    - name: /etc/crontab のコピーを取る(変更がある場合のみ)
+      ansible.builtin.command: "cp -p /etc/crontab {{ cron_backup }}"
+      args:
+        creates: "{{ cron_backup }}"
+      when: (cron_before.stdout_lines | length) > 0
+
+    - name: パッケージ更新の行をコメントにする
+      ansible.builtin.replace:
+        path: /etc/crontab
+        regexp: '^([^#\n]*/usr/local/script/package_(?:full)?update\.sh.*)$'
+        replace: '#\1'
+
+    - name: パッケージ更新の行を取得(変更後)
+      ansible.builtin.shell: grep -n 'package_' /etc/crontab || true
+      register: cron_after
+      changed_when: false
+
+    - name: パッケージ更新の行を表示(変更後)
+      ansible.builtin.debug:
+        var: cron_after.stdout_lines

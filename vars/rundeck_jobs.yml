@@ -11,7 +11,7 @@ rundeck_jobs:
     description: "Package update (package_update.sh), 2nd Saturday 16:00"
     loglevel: INFO
     executionEnabled: true
-    scheduleEnabled: false
+    scheduleEnabled: true
     schedule:
       crontab: "0 0 16 ? * 7#2 *"
     nodefilters:
@@ -31,7 +31,7 @@ rundeck_jobs:
     description: "Package update (package_update.sh), 4th Saturday 16:00"
     loglevel: INFO
     executionEnabled: true
-    scheduleEnabled: false
+    scheduleEnabled: true
     schedule:
       crontab: "0 0 16 ? * 7#4 *"
     nodefilters:
@@ -51,7 +51,7 @@ rundeck_jobs:
     description: "Package full upgrade (package_fullupdate.sh), last day of month 16:00"
     loglevel: INFO
     executionEnabled: true
-    scheduleEnabled: false
+    scheduleEnabled: true
     schedule:
       crontab: "0 0 16 L * ? *"
     nodefilters:

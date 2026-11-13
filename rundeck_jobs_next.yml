@@ -1,0 +1,58 @@
+---
+# Rundeck の各ジョブ(vars/rundeck_jobs.yml)の状態の表示(設定は変更しない)
+# スケジュールの有効・無効、次回実行時刻、直近の実行結果を表示する
+# 時刻は UTC で表示される(日本時間は +9 時間)
+# 実行: ansible-playbook rundeck_jobs_next.yml
+- name: rundeck_jobs_next
+  hosts: raspberrypi-desktop
+  gather_facts: false
+  become: false
+  vars_files:
+    - vars/rundeck_jobs.yml
+  vars:
+    rundeck_api_url: http://127.0.0.1:4440/api/60
+    rundeck_api_token: "{{ lookup('ansible.builtin.file', lookup('ansible.builtin.env', 'HOME') + '/.rundeck_api_token') }}"
+  tasks:
+    - name: 各ジョブの情報を取得
+      ansible.builtin.uri:
+        url: "{{ rundeck_api_url }}/job/{{ item.uuid }}/info"
+        use_proxy: false
+        headers:
+          X-Rundeck-Auth-Token: "{{ rundeck_api_token }}"
+          Accept: application/json
+        status_code: [200, 403, 404, 500]
+        return_content: true
+      loop: "{{ rundeck_jobs }}"
+      loop_control:
+        label: "{{ item.name }}"
+      register: rd_info
+      no_log: true
+
+    - name: スケジュールの状態と次回実行時刻の表示
+      ansible.builtin.debug:
+        msg: "{{ item.item.name }}: status={{ item.status }} scheduleEnabled={{ item.json.scheduleEnabled | default('不明') }} 次回実行(UTC)={{ item.json.nextScheduledExecution | default('なし') }}"
+      loop: "{{ rd_info.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+
+    - name: 各ジョブの直近の実行を取得
+      ansible.builtin.uri:
+        url: "{{ rundeck_api_url }}/job/{{ item.uuid }}/executions?max=1"
+        use_proxy: false
+        headers:
+          X-Rundeck-Auth-Token: "{{ rundeck_api_token }}"
+          Accept: application/json
+        status_code: [200, 403, 404, 500]
+        return_content: true
+      loop: "{{ rundeck_jobs }}"
+      loop_control:
+        label: "{{ item.name }}"
+      register: rd_exec
+      no_log: true
+
+    - name: 直近の実行結果の表示
+      ansible.builtin.debug:
+        msg: "{{ item.item.name }}: status={{ item.status }} 直近の実行={{ (item.json.executions | default([]) | first | default({})) or '実行なし' }}"
+      loop: "{{ rd_exec.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
