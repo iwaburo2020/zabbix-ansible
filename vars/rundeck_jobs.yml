@@ -130,3 +130,179 @@ rundeck_jobs:
       strategy: node-first
       commands:
         - exec: "sudo /bin/sh -c /usr/local/script/package_fullupdate.sh > /dev/null"
+
+  - name: flag-reboot-sun-0058
+    group: reboot
+    uuid: d048c614-410d-45eb-9ba8-1c42b4ef9573
+    description: "make_flagfile.sh 00:58 (day 9-15) and stop.sh reboot 00:59 (day 9-15, 23-29), Sunday. Starts 00:57 and waits on the node clock"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 57 0 ? * 1 *"
+    nodefilters:
+      filter: "name: ntp001"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: true
+      strategy: node-first
+      commands:
+        - exec: "d=$(date +%-d); case $d in 9|1[0-5]) t=$(( $(date -d 00:58 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/make_flagfile.sh > /dev/null ;; *) echo skip: day $d ;; esac"
+        - exec: "d=$(date +%-d); case $d in 9|1[0-5]|2[3-9]) t=$(( $(date -d 00:59 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/stop.sh reboot > /dev/null ;; *) echo skip: day $d ;; esac"
+
+  - name: flag-reboot-sun-0158
+    group: reboot
+    uuid: 07a28f56-cb13-4f14-baf1-eeba02ded906
+    description: "make_flagfile.sh 01:58 (day 9-15) and stop.sh reboot 01:59 (day 9-15, 23-29), Sunday. Starts 01:57 and waits on the node clock"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 57 1 ? * 1 *"
+    nodefilters:
+      filter: "name: ntp002"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: true
+      strategy: node-first
+      commands:
+        - exec: "d=$(date +%-d); case $d in 9|1[0-5]) t=$(( $(date -d 01:58 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/make_flagfile.sh > /dev/null ;; *) echo skip: day $d ;; esac"
+        - exec: "d=$(date +%-d); case $d in 9|1[0-5]|2[3-9]) t=$(( $(date -d 01:59 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/stop.sh reboot > /dev/null ;; *) echo skip: day $d ;; esac"
+
+  - name: flag-reboot-sun-0258
+    group: reboot
+    uuid: f0c5febc-ff2e-4775-af16-e3a276491787
+    description: "make_flagfile.sh 02:58 (day 9-15) and stop.sh reboot 02:59 (day 9-15, 23-29), Sunday. Starts 02:57 and waits on the node clock"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 57 2 ? * 1 *"
+    nodefilters:
+      filter: "name: ntp003"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: true
+      strategy: node-first
+      commands:
+        - exec: "d=$(date +%-d); case $d in 9|1[0-5]) t=$(( $(date -d 02:58 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/make_flagfile.sh > /dev/null ;; *) echo skip: day $d ;; esac"
+        - exec: "d=$(date +%-d); case $d in 9|1[0-5]|2[3-9]) t=$(( $(date -d 02:59 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/stop.sh reboot > /dev/null ;; *) echo skip: day $d ;; esac"
+
+  - name: flag-reboot-sun-0358
+    group: reboot
+    uuid: 262847a4-e02f-4fa0-b972-47bced7df250
+    description: "make_flagfile.sh 03:58 (day 9-15) and stop.sh reboot 03:59 (day 9-15, 23-29), Sunday. Starts 03:57 and waits on the node clock"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 57 3 ? * 1 *"
+    nodefilters:
+      filter: "name: ntp004,web001b,web002b"
+      dispatch:
+        threadcount: "3"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: true
+      strategy: node-first
+      commands:
+        - exec: "d=$(date +%-d); case $d in 9|1[0-5]) t=$(( $(date -d 03:58 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/make_flagfile.sh > /dev/null ;; *) echo skip: day $d ;; esac"
+        - exec: "d=$(date +%-d); case $d in 9|1[0-5]|2[3-9]) t=$(( $(date -d 03:59 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/stop.sh reboot > /dev/null ;; *) echo skip: day $d ;; esac"
+
+  - name: flag-reboot-1st-0058
+    group: reboot
+    uuid: 9416a0ea-7775-4378-b397-89866855caab
+    description: "make_flagfile.sh 00:58 and stop.sh reboot 00:59, 1st day of month. Starts 00:57 and waits on the node clock"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 57 0 1 * ? *"
+    nodefilters:
+      filter: "name: ntp001"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: true
+      strategy: node-first
+      commands:
+        - exec: "t=$(( $(date -d 00:58 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/make_flagfile.sh > /dev/null"
+        - exec: "t=$(( $(date -d 00:59 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/stop.sh reboot > /dev/null"
+
+  - name: flag-reboot-1st-0158
+    group: reboot
+    uuid: e545d488-79ee-41a7-bfac-d729abfaeadd
+    description: "make_flagfile.sh 01:58 and stop.sh reboot 01:59, 1st day of month. Starts 01:57 and waits on the node clock"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 57 1 1 * ? *"
+    nodefilters:
+      filter: "name: ntp002"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: true
+      strategy: node-first
+      commands:
+        - exec: "t=$(( $(date -d 01:58 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/make_flagfile.sh > /dev/null"
+        - exec: "t=$(( $(date -d 01:59 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/stop.sh reboot > /dev/null"
+
+  - name: flag-reboot-1st-0258
+    group: reboot
+    uuid: 7cee4787-1b0f-416e-bbde-e0485763fd5c
+    description: "make_flagfile.sh 02:58 and stop.sh reboot 02:59, 1st day of month. Starts 02:57 and waits on the node clock"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 57 2 1 * ? *"
+    nodefilters:
+      filter: "name: ntp003"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: true
+      strategy: node-first
+      commands:
+        - exec: "t=$(( $(date -d 02:58 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/make_flagfile.sh > /dev/null"
+        - exec: "t=$(( $(date -d 02:59 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/stop.sh reboot > /dev/null"
+
+  - name: flag-reboot-1st-0358
+    group: reboot
+    uuid: 895ab119-60b1-424f-8d7a-953a2a0a8c14
+    description: "make_flagfile.sh 03:58 and stop.sh reboot 03:59, 1st day of month. Starts 03:57 and waits on the node clock"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 57 3 1 * ? *"
+    nodefilters:
+      filter: "name: ntp004,web001b,web002b"
+      dispatch:
+        threadcount: "3"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: true
+      strategy: node-first
+      commands:
+        - exec: "t=$(( $(date -d 03:58 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/make_flagfile.sh > /dev/null"
+        - exec: "t=$(( $(date -d 03:59 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/stop.sh reboot > /dev/null"

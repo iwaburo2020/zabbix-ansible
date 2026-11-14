@@ -1,0 +1,48 @@
+---
+# Rundeck のジョブへ切り替えたホストの /etc/crontab で、
+# フラグ作成の行(make_flagfile.sh)と再起動の行(stop.sh reboot)を行頭 # でコメントにする
+# 変更前に cp -p /etc/crontab /etc/crontab.bkYYYYMMDD(実行日)でコピーを取る
+# 有効な行の数が cron_expected_lines と違うホストは、何も変更せずに中止する
+# 実行: ansible-playbook rundeck_cron_reboot_off.yml -e cutover_hosts=<ホスト名> -e cron_expected_lines=<行数>
+- name: rundeck_cron_reboot_off
+  hosts: "{{ cutover_hosts }}"
+  gather_facts: false
+  vars:
+    cron_expected_lines: 5
+    cron_backup: "/etc/crontab.bk{{ lookup('ansible.builtin.pipe', 'date +%Y%m%d') }}"
+  tasks:
+    - name: 有効なフラグ作成・再起動の行を取得(変更前)
+      ansible.builtin.shell: grep -nE '^[^#]*/usr/local/script/(make_flagfile\.sh|stop\.sh reboot)' /etc/crontab || true
+      register: cron_before
+      changed_when: false
+
+    - name: 有効なフラグ作成・再起動の行を表示(変更前)
+      ansible.builtin.debug:
+        var: cron_before.stdout_lines
+
+    - name: 行数の確認(想定の行数、またはコメント済みで0行)
+      ansible.builtin.assert:
+        that: (cron_before.stdout_lines | length) in [0, (cron_expected_lines | int)]
+        fail_msg: "有効なフラグ作成・再起動の行が {{ cron_before.stdout_lines | length }} 行です(想定は {{ cron_expected_lines }} 行)。変更せずに中止します"
+        quiet: true
+
+    - name: /etc/crontab のコピーを取る(変更がある場合のみ)
+      ansible.builtin.command: "cp -p /etc/crontab {{ cron_backup }}"
+      args:
+        creates: "{{ cron_backup }}"
+      when: (cron_before.stdout_lines | length) > 0
+
+    - name: フラグ作成・再起動の行をコメントにする
+      ansible.builtin.replace:
+        path: /etc/crontab
+        regexp: '^([^#\n]*/usr/local/script/(?:make_flagfile\.sh|stop\.sh reboot).*)$'
+        replace: '#\1'
+
+    - name: フラグ作成・再起動の行を取得(変更後)
+      ansible.builtin.shell: grep -nE 'make_flagfile\.sh|stop\.sh' /etc/crontab || true
+      register: cron_after
+      changed_when: false
+
+    - name: フラグ作成・再起動の行を表示(変更後)
+      ansible.builtin.debug:
+        var: cron_after.stdout_lines
