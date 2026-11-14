@@ -36,3 +36,8 @@ all:
     rundeck_nodes:
       hosts:
         ntp004:
+        ntp001:
+        ntp002:
+        ntp003:
+        web001b:
+        web002b:

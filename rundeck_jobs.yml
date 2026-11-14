@@ -1,6 +1,7 @@
 ---
 # Rundeck のジョブ登録(vars/rundeck_jobs.yml の定義を API で登録・更新する)
 # 同じ uuid のジョブがあれば更新し、無ければ作成する。ジョブの実行はしない
+# 登録後、各ジョブの登録内容と、対象の指定に一致するノードを表示する
 # 前提: rundeck_project.yml 実行済み
 # 実行: ansible-playbook rundeck_jobs.yml
 - name: rundeck_jobs
@@ -48,11 +49,36 @@
         headers:
           X-Rundeck-Auth-Token: "{{ rundeck_api_token }}"
           Accept: application/json
-        status_code: [200, 400, 403, 404, 500]
+        status_code: 200
         return_content: true
       register: rd_export
       no_log: true
 
     - name: 登録されているジョブ定義の表示
       ansible.builtin.debug:
-        msg: "status={{ rd_export.status }} {{ rd_export.json | default(rd_export.content) }}"
+        msg: "{{ item.name }}: scheduleEnabled={{ item.scheduleEnabled }} schedule={{ item.schedule }} 対象の指定={{ item.nodefilters.filter }} 同時実行数={{ item.nodefilters.dispatch.threadcount }} コマンド={{ item.sequence.commands | map(attribute='exec') | list }}"
+      loop: "{{ rd_export.json | sort(attribute='name') }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: 各ジョブの対象の指定に一致するノードを取得
+      ansible.builtin.uri:
+        url: "{{ rundeck_api_url }}/project/{{ rundeck_project_name }}/resources?format=json&filter={{ item.nodefilters.filter | urlencode }}"
+        use_proxy: false
+        headers:
+          X-Rundeck-Auth-Token: "{{ rundeck_api_token }}"
+          Accept: application/json
+        status_code: 200
+        return_content: true
+      loop: "{{ rundeck_jobs }}"
+      loop_control:
+        label: "{{ item.name }}"
+      register: rd_match
+      no_log: true
+
+    - name: 各ジョブの対象ノードの表示
+      ansible.builtin.debug:
+        msg: "{{ item.item.name }}: 対象ノード={{ item.json | default({}) | list | sort }}"
+      loop: "{{ rd_match.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"

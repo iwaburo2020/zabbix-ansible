@@ -1,10 +1,73 @@
 ---
 # Rundeck のジョブ定義(プロジェクト infra)。書式は Rundeck のジョブ定義(JSON/YAML)と同じ
 # - schedule.crontab は Quartz 形式(秒 分 時 日 月 曜日 年)。7#2=第2土曜、7#4=第4土曜、L=月末日
-# - scheduleEnabled: false の間は、Rundeck は自動では実行しない(cron からの切り替え時に true にする)
-# - nodefilters.filter の対象を2台以上にするときは、nodefilters.dispatch.threadcount を台数以上にする
-#   (cron は各ホストが同時に実行するため)
+# - scheduleEnabled: true のジョブは Rundeck が自動で実行する(対象ホストの cron の同じ行は止めておくこと)
+# - nodefilters.filter の対象が複数のときは、カンマ区切り(空白なし)で書き、
+#   nodefilters.dispatch.threadcount を台数にする(cron は各ホストが同時に実行するため)
 rundeck_jobs:
+  - name: update-2sat-1500
+    group: package
+    uuid: 06ade4b1-2617-4ad7-a520-70a420d20991
+    description: "Package update (package_update.sh), 2nd Saturday 15:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 15 ? * 7#2 *"
+    nodefilters:
+      filter: "name: ntp001,ntp002,ntp003"
+      dispatch:
+        threadcount: "3"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "sudo /bin/sh -c /usr/local/script/package_update.sh > /dev/null"
+
+  - name: update-4sat-1500
+    group: package
+    uuid: 4846f292-6f6d-4db9-b503-f48d34c12625
+    description: "Package update (package_update.sh), 4th Saturday 15:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 15 ? * 7#4 *"
+    nodefilters:
+      filter: "name: ntp001,ntp002,ntp003"
+      dispatch:
+        threadcount: "3"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "sudo /bin/sh -c /usr/local/script/package_update.sh > /dev/null"
+
+  - name: fullupdate-eom-1500
+    group: package
+    uuid: baefe17a-457e-4800-b960-eff6c1224aa2
+    description: "Package full upgrade (package_fullupdate.sh), last day of month 15:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 15 L * ? *"
+    nodefilters:
+      filter: "name: ntp001,ntp002,ntp003"
+      dispatch:
+        threadcount: "3"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "sudo /bin/sh -c /usr/local/script/package_fullupdate.sh > /dev/null"
+
   - name: update-2sat-1600
     group: package
     uuid: b9c1245d-a986-4fb7-a7a9-67f74c1a248d
@@ -15,8 +78,9 @@ rundeck_jobs:
     schedule:
       crontab: "0 0 16 ? * 7#2 *"
     nodefilters:
-      filter: "name: ntp004"
+      filter: "name: ntp004,web001b,web002b"
       dispatch:
+        threadcount: "3"
         keepgoing: true
     nodesSelectedByDefault: true
     sequence:
@@ -35,8 +99,9 @@ rundeck_jobs:
     schedule:
       crontab: "0 0 16 ? * 7#4 *"
     nodefilters:
-      filter: "name: ntp004"
+      filter: "name: ntp004,web001b,web002b"
       dispatch:
+        threadcount: "3"
         keepgoing: true
     nodesSelectedByDefault: true
     sequence:
@@ -55,8 +120,9 @@ rundeck_jobs:
     schedule:
       crontab: "0 0 16 L * ? *"
     nodefilters:
-      filter: "name: ntp004"
+      filter: "name: ntp004,web001b,web002b"
       dispatch:
+        threadcount: "3"
         keepgoing: true
     nodesSelectedByDefault: true
     sequence:
