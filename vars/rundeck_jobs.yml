@@ -411,3 +411,24 @@ rundeck_jobs:
       strategy: node-first
       commands:
         - exec: "set -o pipefail; sudo /usr/local/script/backup_file_nfs.sh ntp004 | sudo tee -a /var/log/backup_file_ntp004.log > /dev/null"
+
+  - name: backup-ntp001-1st-0200
+    group: backup
+    uuid: fbba68df-7f90-41e8-877c-901397c73ab0
+    description: "Backup of ntp001 (backup_file.sh on ntp001), 1st day of month 02:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 2 1 * ? *"
+    nodefilters:
+      filter: "name: ntp001"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "set -o pipefail; sudo /usr/local/script/backup_file.sh | sudo tee -a /var/log/backup_file.log > /dev/null"

@@ -1,0 +1,49 @@
+---
+# Rundeck のジョブへ切り替えたホストの root の crontab で、
+# 自分自身のバックアップ(毎月1日の backup_file.sh)の行を行頭 # でコメントにする
+# 有効な行が1行でも、コメント済みの0行でもない場合は、何も変更せずに中止する
+# 実行: ansible-playbook rundeck_cron_backup_self_off.yml -e cutover_hosts=<ホスト名>
+- name: rundeck_cron_backup_self_off
+  hosts: "{{ cutover_hosts }}"
+  gather_facts: false
+  vars:
+    backup_regexp: '^(\d+\s+\d+\s+0?1\s+\*\s+\*\s+/usr/local/script/backup_file\.sh\s.*)$'
+    backup_replace: '#\g<1>'
+  tasks:
+    - name: root の crontab の現在の内容を取得する(crontab -l -u root)
+      ansible.builtin.command: crontab -l -u root
+      register: crontab_now
+      changed_when: false
+
+    - name: backup_file.sh の行を表示(変更前)
+      ansible.builtin.debug:
+        msg: "{{ crontab_now.stdout_lines | select('search', 'backup_file') | list }}"
+
+    - name: 有効な行の数を数える
+      ansible.builtin.set_fact:
+        backup_count: "{{ crontab_now.stdout | regex_findall(backup_regexp, multiline=True) | length }}"
+
+    - name: 行数の確認(毎月1日の backup_file.sh が1行、またはコメント済みで0行)
+      ansible.builtin.assert:
+        that: (backup_count | int) in [0, 1]
+        fail_msg: "毎月1日の backup_file.sh の有効な行が {{ backup_count }} 行です(想定は 1 行)。変更せずに中止します"
+        quiet: true
+
+    - name: 変更後の内容を登録する(該当の1行をコメントにして crontab -u root -)
+      ansible.builtin.command:
+        cmd: crontab -u root -
+        stdin: "{{ crontab_now.stdout | regex_replace(backup_regexp, backup_replace, multiline=True) }}"
+      when: (backup_count | int) == 1
+
+    - name: root の crontab の内容を取得する(変更後)
+      ansible.builtin.command: crontab -l -u root
+      register: crontab_after
+      changed_when: false
+
+    - name: backup_file.sh の行を表示(変更後)
+      ansible.builtin.debug:
+        msg: "{{ crontab_after.stdout_lines | select('search', 'backup_file') | list }}"
+
+    - name: 行数を表示(変更前と変更後)
+      ansible.builtin.debug:
+        msg: "変更前 {{ crontab_now.stdout_lines | length }} 行 / 変更後 {{ crontab_after.stdout_lines | length }} 行"
