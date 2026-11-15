@@ -1,0 +1,58 @@
+---
+# Rundeck のジョブへ切り替えた backup001 の root の crontab で、
+# 毎月1日の backup_file_nfs.sh(ntp002・ntp003・web001・web002)の4行を行頭 # でコメントにし、
+# 毎月15日の backup_file_nfs.sh(web001・web002)の2行を削除する(2026-11-03 に廃止と決定)
+# 有効な行が「毎月1日 4行・毎月15日 2行」でも「0行・0行」でもない場合は、何も変更せずに中止する
+# backup001 自身のバックアップ(backup_file.sh)の行は変更しない
+# 実行: ansible-playbook rundeck_cron_backup_off.yml
+- name: rundeck_cron_backup_off
+  hosts: backup001
+  gather_facts: false
+  vars:
+    day1_regexp: '^(\d+\s+\d+\s+1\s+\*\s+\*\s+/usr/local/script/backup_file_nfs\.sh\s+(?:ntp002|ntp003|web001|web002)\s.*)$'
+    day1_replace: '#\g<1>'
+    day15_regexp: '^\d+\s+\d+\s+15\s+\*\s+\*\s+/usr/local/script/backup_file_nfs\.sh\s+(?:web001|web002)\s.*\n?'
+    tail_regexp: '\n+\Z'
+  tasks:
+    - name: root の crontab の現在の内容を取得する(crontab -l -u root)
+      ansible.builtin.command: crontab -l -u root
+      register: crontab_now
+      changed_when: false
+
+    - name: backup_file_nfs.sh の行を表示(変更前)
+      ansible.builtin.debug:
+        msg: "{{ crontab_now.stdout_lines | select('search', 'backup_file_nfs') | list }}"
+
+    - name: 有効な行の数を数える
+      ansible.builtin.set_fact:
+        day1_count: "{{ crontab_now.stdout | regex_findall(day1_regexp, multiline=True) | length }}"
+        day15_count: "{{ crontab_now.stdout | regex_findall(day15_regexp, multiline=True) | length }}"
+
+    - name: 行数の確認(毎月1日 4行・毎月15日 2行、または変更済みで 0行・0行)
+      ansible.builtin.assert:
+        that: (day1_count | int == 4 and day15_count | int == 2) or (day1_count | int == 0 and day15_count | int == 0)
+        fail_msg: "有効な行が 毎月1日 {{ day1_count }} 行・毎月15日 {{ day15_count }} 行です(想定は 4 行・2 行)。変更せずに中止します"
+        quiet: true
+
+    - name: 変更後の内容を作る(毎月15日の2行を削除し、毎月1日の4行をコメントにする)
+      ansible.builtin.set_fact:
+        crontab_new: "{{ crontab_now.stdout | regex_replace(day15_regexp, '', multiline=True) | regex_replace(day1_regexp, day1_replace, multiline=True) | regex_replace(tail_regexp, '') }}"
+
+    - name: 変更後の内容を登録する(crontab -u root -)
+      ansible.builtin.command:
+        cmd: crontab -u root -
+        stdin: "{{ crontab_new }}"
+      when: crontab_new != crontab_now.stdout
+
+    - name: root の crontab の内容を取得する(変更後)
+      ansible.builtin.command: crontab -l -u root
+      register: crontab_after
+      changed_when: false
+
+    - name: backup の行を表示(変更後)
+      ansible.builtin.debug:
+        msg: "{{ crontab_after.stdout_lines | select('search', 'backup_file') | list }}"
+
+    - name: 行数を表示(変更前と変更後)
+      ansible.builtin.debug:
+        msg: "変更前 {{ crontab_now.stdout_lines | length }} 行 / 変更後 {{ crontab_after.stdout_lines | length }} 行"
