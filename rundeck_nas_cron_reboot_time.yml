@@ -1,0 +1,59 @@
+---
+# nas001b(cron のまま)のフラグ作成・再起動の時刻を、4:58・4:59 から 0:28・0:29 に変更する(2026-11-15 承認)
+#   理由:NFS ブートのサーバー(ntp002・ntp003・ntp004・web001b・web002b)の再起動(1:59〜3:59)より前に nas001b を再起動するため
+# /etc/crontab のフラグ作成2行(9〜15日の日曜、毎月1日)と再起動3行(9〜15日の日曜、23〜29日の日曜、毎月1日)の
+# 分と時だけを書き換える。日付・コマンドは変えない。パッケージ更新(17:00)とバックアップ(6:00)の行は変更しない
+# 変更前に cp -p /etc/crontab /etc/crontab.bkYYYYMMDD(実行日)でコピーを取る
+# 4:58・4:59 の行が5行でも、変更済み(0:28・0:29 の行が5行)でもない場合は、何も変更せずに中止する
+# 実行: ansible-playbook rundeck_nas_cron_reboot_time.yml
+- name: rundeck_nas_cron_reboot_time
+  hosts: nas001b
+  gather_facts: false
+  vars:
+    cron_file: /etc/crontab
+    cron_backup: "{{ cron_file }}.bk{{ lookup('ansible.builtin.pipe', 'date +%Y%m%d') }}"
+    cron_expected_lines: 5
+    cron_tail: '[[:space:]]+(9-15|23-29|1)[[:space:]].*/usr/local/script/(make_flagfile\.sh|stop\.sh reboot)'
+  tasks:
+    - name: 4:58・4:59 のフラグ作成・再起動の行を取得(変更前)
+      ansible.builtin.shell: grep -nE '^5[89][[:space:]]+0?4{{ cron_tail }}' {{ cron_file }} || true
+      register: cron_old
+      changed_when: false
+
+    - name: 0:28・0:29 のフラグ作成・再起動の行を取得(変更前)
+      ansible.builtin.shell: grep -nE '^2[89][[:space:]]+0?0{{ cron_tail }}' {{ cron_file }} || true
+      register: cron_new
+      changed_when: false
+
+    - name: 4:58・4:59 の行を表示(変更前)
+      ansible.builtin.debug:
+        var: cron_old.stdout_lines
+
+    - name: 行数の確認(4:58・4:59 が5行、または変更済みで 0:28・0:29 が5行)
+      ansible.builtin.assert:
+        that: >-
+          ((cron_old.stdout_lines | length) == (cron_expected_lines | int) and (cron_new.stdout_lines | length) == 0)
+          or ((cron_old.stdout_lines | length) == 0 and (cron_new.stdout_lines | length) == (cron_expected_lines | int))
+        fail_msg: "4:58・4:59 の行が {{ cron_old.stdout_lines | length }} 行、0:28・0:29 の行が {{ cron_new.stdout_lines | length }} 行です(想定は {{ cron_expected_lines }} 行と 0 行)。変更せずに中止します"
+        quiet: true
+
+    - name: /etc/crontab のコピーを取る(変更がある場合のみ)
+      ansible.builtin.command: "cp -p {{ cron_file }} {{ cron_backup }}"
+      args:
+        creates: "{{ cron_backup }}"
+      when: (cron_old.stdout_lines | length) > 0
+
+    - name: 4:58 を 0:28 に、4:59 を 0:29 に書き換える
+      ansible.builtin.replace:
+        path: "{{ cron_file }}"
+        regexp: '^5([89])(\s+)0?4(\s+(?:9-15|23-29|1)\s.*/usr/local/script/(?:make_flagfile\.sh|stop\.sh reboot).*)$'
+        replace: '2\g<1>\g<2>0\g<3>'
+
+    - name: フラグ作成・再起動の行を取得(変更後)
+      ansible.builtin.shell: grep -nE 'make_flagfile\.sh|stop\.sh' {{ cron_file }} || true
+      register: cron_after
+      changed_when: false
+
+    - name: フラグ作成・再起動の行を表示(変更後)
+      ansible.builtin.debug:
+        var: cron_after.stdout_lines
