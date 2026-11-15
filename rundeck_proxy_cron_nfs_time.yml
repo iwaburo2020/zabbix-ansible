@@ -1,0 +1,88 @@
+---
+# proxy001b の chk_umnt.sh(毎週日曜 4:50)と chk_mnt.sh(毎週日曜 5:10)の時刻を、0:20 と 0:40 に変更する(2026-11-15)
+#   理由:この2つは nas001b の再起動に合わせた処理で、nas001b の再起動を 4:59 から 0:29 に変更したため
+#   (再起動の9分前と11分後という間隔は変えない)
+# 2行が /etc/crontab にある場合は、変更前に cp -p /etc/crontab /etc/crontab.bkYYYYMMDD(実行日)でコピーを取って書き換える
+# 2行が root の crontab にある場合は、crontab コマンドで書き換える
+# 分と時だけを書き換える。曜日・コマンドは変えない
+# 4:50・5:10 の2行が見つからず、変更済み(0:20・0:40 の2行)でもない場合は、何も変更せずに中止する
+# 実行: ansible-playbook rundeck_proxy_cron_nfs_time.yml
+- name: rundeck_proxy_cron_nfs_time
+  hosts: proxy001b
+  gather_facts: false
+  vars:
+    cron_file: /etc/crontab
+    cron_backup: "{{ cron_file }}.bk{{ lookup('ansible.builtin.pipe', 'date +%Y%m%d') }}"
+    umnt_old: '^50(\s+)0?4(\s+\*\s+\*\s+\S+\s.*/home/script/chk_umnt\.sh.*)$'
+    umnt_rep: '20\g<1>0\g<2>'
+    mnt_old: '^10(\s+)0?5(\s+\*\s+\*\s+\S+\s.*/home/script/chk_mnt\.sh.*)$'
+    mnt_rep: '40\g<1>0\g<2>'
+    umnt_new: '^20\s+0\s+\*\s+\*\s+\S+\s.*/home/script/chk_umnt\.sh'
+    mnt_new: '^40\s+0\s+\*\s+\*\s+\S+\s.*/home/script/chk_mnt\.sh'
+  tasks:
+    - name: /etc/crontab の内容を取得する
+      ansible.builtin.command: "cat {{ cron_file }}"
+      register: etc_now
+      changed_when: false
+
+    - name: root の crontab の内容を取得する(crontab -l -u root)
+      ansible.builtin.command: crontab -l -u root
+      register: root_now
+      changed_when: false
+      failed_when: false
+
+    - name: chk_umnt.sh・chk_mnt.sh の行を表示(変更前)
+      ansible.builtin.debug:
+        msg:
+          - "/etc/crontab: {{ etc_now.stdout_lines | select('search', 'chk_u?mnt') | list }}"
+          - "root の crontab: {{ root_now.stdout_lines | select('search', 'chk_u?mnt') | list }}"
+
+    - name: 行数を数える
+      ansible.builtin.set_fact:
+        etc_old: "{{ (etc_now.stdout | regex_findall(umnt_old, multiline=True) | length) + (etc_now.stdout | regex_findall(mnt_old, multiline=True) | length) }}"
+        root_old: "{{ (root_now.stdout | regex_findall(umnt_old, multiline=True) | length) + (root_now.stdout | regex_findall(mnt_old, multiline=True) | length) }}"
+        all_new: "{{ ((etc_now.stdout ~ '\n' ~ root_now.stdout) | regex_findall(umnt_new, multiline=True) | length) + ((etc_now.stdout ~ '\n' ~ root_now.stdout) | regex_findall(mnt_new, multiline=True) | length) }}"
+
+    - name: 行数の確認(4:50・5:10 の2行がどちらか一方にある、または変更済みで 0:20・0:40 の2行がある)
+      ansible.builtin.assert:
+        that: >-
+          (etc_old | int == 2 and root_old | int == 0 and all_new | int == 0)
+          or (etc_old | int == 0 and root_old | int == 2 and all_new | int == 0)
+          or (etc_old | int == 0 and root_old | int == 0 and all_new | int == 2)
+        fail_msg: "4:50・5:10 の行が /etc/crontab に {{ etc_old }} 行、root の crontab に {{ root_old }} 行、0:20・0:40 の行が {{ all_new }} 行です。変更せずに中止します"
+        quiet: true
+
+    - name: /etc/crontab のコピーを取る(/etc/crontab を変更する場合のみ)
+      ansible.builtin.command: "cp -p {{ cron_file }} {{ cron_backup }}"
+      args:
+        creates: "{{ cron_backup }}"
+      when: etc_old | int == 2
+
+    - name: /etc/crontab の chk_umnt.sh を 0:20 に書き換える
+      ansible.builtin.replace:
+        path: "{{ cron_file }}"
+        regexp: "{{ umnt_old }}"
+        replace: "{{ umnt_rep }}"
+      when: etc_old | int == 2
+
+    - name: /etc/crontab の chk_mnt.sh を 0:40 に書き換える
+      ansible.builtin.replace:
+        path: "{{ cron_file }}"
+        regexp: "{{ mnt_old }}"
+        replace: "{{ mnt_rep }}"
+      when: etc_old | int == 2
+
+    - name: root の crontab の2行を書き換えて登録する(crontab -u root -)
+      ansible.builtin.command:
+        cmd: crontab -u root -
+        stdin: "{{ root_now.stdout | regex_replace(umnt_old, umnt_rep, multiline=True) | regex_replace(mnt_old, mnt_rep, multiline=True) }}"
+      when: root_old | int == 2
+
+    - name: chk_umnt.sh・chk_mnt.sh の行を取得(変更後)
+      ansible.builtin.shell: echo "[{{ cron_file }}]"; grep -nE 'chk_u?mnt' {{ cron_file }}; echo "[root crontab]"; crontab -l -u root 2>/dev/null | grep -nE 'chk_u?mnt'; true
+      register: cron_after
+      changed_when: false
+
+    - name: chk_umnt.sh・chk_mnt.sh の行を表示(変更後)
+      ansible.builtin.debug:
+        var: cron_after.stdout_lines
