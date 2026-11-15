@@ -23,6 +23,8 @@
 
 月末日の再起動は、「翌日」のホストは1日、「当日」のホストは月末日の同じ時刻に行う。
 
+2026-11-15 の変更(8章)を反映済み。
+
 | ホスト | パッケージ更新 | 再起動 | バックアップ(毎月1日) |
 |---|---|---|---|
 | gps001b | 12:00 | 23:20(当日) | 1:00 |
@@ -32,17 +34,17 @@
 | dhcp001b | 15:00 | 3:59(翌日) | 5:00 |
 | backup001 | 12:00 | 23:29(当日) | 1:50 |
 | wap001b | 12:00 | 23:59(当日) | 1:00 |
-| nas001b | 17:00 | 4:59(翌日) | 6:00 |
+| nas001b | 17:00 | 0:29(翌日) | 6:00 |
 | proxy001b | 18:00 | 5:59(翌日) | 7:00 |
 | ntp001 | 15:00 | 0:59(翌日) | 2:00 |
 | ntp002 | 15:00 | 1:59(翌日) | 3:30(backup001 から取得) |
 | ntp003 | 15:00 | 2:59(翌日) | 4:00(backup001 から取得) |
-| ntp004 | 16:00 | 3:59(翌日) | なし |
+| ntp004 | 16:00 | 3:59(翌日) | 4:30(backup001 から取得) |
 | logbackup001 | cron の定義なし | 23:59(月末日のみ) | なし |
-| raspberrypi-desktop | 14:00 | 1:59(翌日) | 3:00 |
+| raspberrypi-desktop | 20:00(月末日のみ) | 21:59(月末日のみ、当日) | 23:00(月末日) |
 | raspberrypi-zabbix | 14:00 | 1:59(翌日) | 3:00 |
-| web001b | 16:00 | 3:59(翌日) | 5:00(backup001 から取得、15日にも取得) |
-| web002b | 16:00 | 3:59(翌日) | 5:30(backup001 から取得、15日にも取得) |
+| web001b | 16:00 | 3:59(翌日) | 5:00(backup001 から取得) |
+| web002b | 16:00 | 3:59(翌日) | 5:30(backup001 から取得) |
 | humidai001b | 12:00(毎週土曜) | 23:59(毎週土曜、当日) | 0:00 |
 | humidai002 | 12:00(毎週土曜) | 23:59(毎週土曜、当日) | 0:00 |
 
@@ -79,10 +81,10 @@
 | wap001b | `/home/script/lan.sh` を30分ごと |
 | dns001b | `/usr/local/script/roothints.sh` を毎週土曜 23:59 |
 | dns002b | `/usr/local/script/roothints.sh` を毎週日曜 23:59 |
-| proxy001b | `/home/script/chk_umnt.sh` を毎週日曜 4:50、`/home/script/chk_mnt.sh` を毎週日曜 5:10 |
+| proxy001b | root の crontab で、`/home/script/chk_umnt.sh` を毎週日曜 0:20、`/home/script/chk_mnt.sh` を毎週日曜 0:40(nas001b の再起動に合わせた処理。2026-11-15 に 4:50・5:10 から変更) |
 | gps001b | `/usr/local/script/system_restart.sh` を毎時59分 |
 | logbackup001 | `/usr/bin/chronyc makestep` を30分ごと |
-| backup001 | root の crontab で、NFS ブートのホストのバックアップ(`backup_file_nfs.sh`)を実行:ntp002 3:30、ntp003 4:00、web001 5:00、web002 5:30(毎月1日)、web001 5:00、web002 5:30(毎月15日) |
+| backup001 | NFS ブートのホストのバックアップ(`backup_file_nfs.sh`)は、2026-11-15 に Rundeck のジョブへ移行した(ntp002 3:30、ntp003 4:00、ntp004 4:30、web001 5:00、web002 5:30、毎月1日)。root の crontab の毎月1日の4行はコメントにし、毎月15日の2行(web001・web002)は削除した |
 
 ## 7. OS 標準・パッケージ由来の定義(変更しない)
 
@@ -91,3 +93,16 @@
 - `/etc/cron.d/php`(raspberrypi-zabbix)
 - `/etc/cron.d/sysstat`(dhcp001b)
 - `/etc/cron.d/0hourly`(logbackup001)
+
+## 8. 棚卸し後の変更(2026-11-15)
+
+| ホスト | 変更前 | 変更後 | playbook |
+|---|---|---|---|
+| raspberrypi-desktop | パッケージ更新:第2土曜・第4土曜・月末日 14:00。再起動:9〜15日の日曜・23〜29日の日曜・毎月1日 1:59。バックアップ:毎月1日 3:00 | 月末日だけ実行する。20:00 `package_fullupdate.sh`、21:58 `make_flagfile.sh`、21:59 `stop.sh reboot`、23:00 `backup_file.sh` | `rundeck_desktop_cron_monthly.yml` |
+| nas001b | フラグ作成 4:58、再起動 4:59 | フラグ作成 0:28、再起動 0:29(日付は変えない) | `rundeck_nas_cron_reboot_time.yml` |
+| proxy001b | `chk_umnt.sh` 毎週日曜 4:50、`chk_mnt.sh` 毎週日曜 5:10 | `chk_umnt.sh` 毎週日曜 0:20、`chk_mnt.sh` 毎週日曜 0:40 | `rundeck_proxy_cron_nfs_time.yml` |
+| ntp001 | バックアップ:root の crontab(毎月1日 2:00) | Rundeck のジョブ(毎月1日 2:00)。root の crontab の行はコメントにした | `rundeck_cron_backup_self_off.yml` |
+
+- raspberrypi-desktop:Rundeck サーバーのため cron のまま運用する。日曜と毎月1日に再起動すると、同じ時刻の Rundeck のジョブ(1:57 起動のフラグ作成・再起動、毎月1日 2:00 のバックアップ)を実行できないため、月末日の 20:00 以降にまとめた(利用者の希望は月1回、月末)
+- nas001b:再起動すると、NFS ブートのサーバー(ntp002、ntp003、ntp004、web001b、web002b)も再起動することがある(原因と対応は `06_rundeck.md` の9章)。NFS ブートのサーバーの予定の再起動(1:59〜3:59)より前に nas001b を再起動する順番にした
+- proxy001b:2つの処理は nas001b の再起動に合わせたもの(利用者確認)。nas001b の再起動の9分前と11分後という間隔は変えていない
