@@ -1,0 +1,105 @@
+---
+# raspberrypi-desktop(Rundeck サーバー、cron のまま)の定期処理を、月末日だけの実行に変更する(2026-11-15 承認)
+#   月末日 20:00 package_fullupdate.sh、21:58 make_flagfile.sh、21:59 stop.sh reboot(/etc/crontab)
+#   月末日 23:00 backup_file.sh(root の crontab)
+# /etc/crontab:今のパッケージ更新・フラグ作成・再起動の8行を行頭 # でコメントにし、月末日の3行を追加する
+#   変更前に cp -p /etc/crontab /etc/crontab.bkYYYYMMDD(実行日)でコピーを取る
+# root の crontab:毎月1日 3:00 の backup_file.sh の行を、月末日 23:00 の行に置き換える
+# 有効な行の数が想定と違う場合は、何も変更せずに中止する
+# 実行: ansible-playbook rundeck_desktop_cron_monthly.yml
+- name: rundeck_desktop_cron_monthly
+  hosts: raspberrypi-desktop
+  gather_facts: false
+  vars:
+    cron_file: /etc/crontab
+    cron_backup: "{{ cron_file }}.bk{{ lookup('ansible.builtin.pipe', 'date +%Y%m%d') }}"
+    cron_old_expected_lines: 8
+    cron_new_lines:
+      - |-
+        00 20   28-31 * *   root    test $( date -d '+1 day' +\%d ) -eq 1 && /usr/local/script/package_fullupdate.sh > /dev/null
+      - |-
+        58 21   28-31 * *   root    test $( date -d '+1 day' +\%d ) -eq 1 && /usr/local/script/make_flagfile.sh > /dev/null
+      - |-
+        59 21   28-31 * *   root    test $( date -d '+1 day' +\%d ) -eq 1 && /usr/local/script/stop.sh reboot > /dev/null
+    backup_old_regexp: '^00\s+0?3\s+0?1\s+\*\s+\*\s+/usr/local/script/backup_file\.sh\s'
+    backup_new_line: |-
+      00 23 28-31 * * test $( date -d '+1 day' +\%d ) -eq 1 && /usr/local/script/backup_file.sh >> /var/log/backup_file.log
+  tasks:
+    - name: /etc/crontab の今の有効な行(パッケージ更新・フラグ作成・再起動)を取得(変更前)
+      ansible.builtin.shell: grep -nE '^[^#]*/usr/local/script/(package_update\.sh|package_fullupdate\.sh|make_flagfile\.sh|stop\.sh reboot)' {{ cron_file }} | grep -vE '^[0-9]+:(00 20|58 21|59 21)[[:space:]]' || true
+      register: cron_before
+      changed_when: false
+
+    - name: /etc/crontab の今の有効な行を表示(変更前)
+      ansible.builtin.debug:
+        var: cron_before.stdout_lines
+
+    - name: 行数の確認(想定の8行、または変更済みで0行)
+      ansible.builtin.assert:
+        that: (cron_before.stdout_lines | length) in [0, (cron_old_expected_lines | int)]
+        fail_msg: "/etc/crontab の有効な行が {{ cron_before.stdout_lines | length }} 行です(想定は {{ cron_old_expected_lines }} 行)。変更せずに中止します"
+        quiet: true
+
+    - name: root の crontab の現在の内容を取得する(crontab -l -u root)
+      ansible.builtin.command: crontab -l -u root
+      register: crontab_now
+      changed_when: false
+
+    - name: root の crontab のバックアップの行を数える
+      ansible.builtin.set_fact:
+        backup_old_count: "{{ crontab_now.stdout_lines | select('match', backup_old_regexp) | list | length }}"
+        backup_new_count: "{{ crontab_now.stdout_lines | select('equalto', backup_new_line) | list | length }}"
+
+    - name: 行数の確認(毎月1日 3:00 の行が1行、または変更済みで月末日 23:00 の行が1行)
+      ansible.builtin.assert:
+        that: (backup_old_count | int == 1 and backup_new_count | int == 0) or (backup_old_count | int == 0 and backup_new_count | int == 1)
+        fail_msg: "root の crontab の backup_file.sh の行が、毎月1日 3:00 が {{ backup_old_count }} 行・月末日 23:00 が {{ backup_new_count }} 行です。変更せずに中止します"
+        quiet: true
+
+    - name: /etc/crontab のコピーを取る(変更がある場合のみ)
+      ansible.builtin.command: "cp -p {{ cron_file }} {{ cron_backup }}"
+      args:
+        creates: "{{ cron_backup }}"
+      when: (cron_before.stdout_lines | length) > 0
+
+    - name: /etc/crontab の今の8行をコメントにする
+      ansible.builtin.replace:
+        path: "{{ cron_file }}"
+        regexp: '^((?!(?:00 20|58 21|59 21)\s)[^#\n]*/usr/local/script/(?:package_update\.sh|package_fullupdate\.sh|make_flagfile\.sh|stop\.sh reboot).*)$'
+        replace: '#\1'
+
+    - name: /etc/crontab に月末日の3行を追加する
+      ansible.builtin.lineinfile:
+        path: "{{ cron_file }}"
+        line: "{{ item }}"
+        insertafter: EOF
+      loop: "{{ cron_new_lines }}"
+
+    - name: root の crontab の変更後の内容を作る(毎月1日 3:00 の行を月末日 23:00 の行に置き換える)
+      ansible.builtin.set_fact:
+        crontab_new: "{{ crontab_now.stdout_lines | map('regex_replace', backup_old_regexp ~ '.*$', '@@BACKUP_NEW@@') | map('replace', '@@BACKUP_NEW@@', backup_new_line) | join('\n') }}"
+      when: backup_old_count | int == 1
+
+    - name: root の crontab に変更後の内容を登録する(crontab -u root -)
+      ansible.builtin.command:
+        cmd: crontab -u root -
+        stdin: "{{ crontab_new }}"
+      when: backup_old_count | int == 1
+
+    - name: /etc/crontab の定期処理の行を取得(変更後)
+      ansible.builtin.shell: grep -nE 'package_update\.sh|package_fullupdate\.sh|make_flagfile\.sh|stop\.sh' {{ cron_file }} || true
+      register: cron_after
+      changed_when: false
+
+    - name: /etc/crontab の定期処理の行を表示(変更後)
+      ansible.builtin.debug:
+        var: cron_after.stdout_lines
+
+    - name: root の crontab の内容を取得する(変更後)
+      ansible.builtin.command: crontab -l -u root
+      register: crontab_after
+      changed_when: false
+
+    - name: root の crontab の内容を表示(変更後)
+      ansible.builtin.debug:
+        var: crontab_after.stdout_lines
