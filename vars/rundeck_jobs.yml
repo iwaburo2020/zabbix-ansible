@@ -306,3 +306,87 @@ rundeck_jobs:
       commands:
         - exec: "t=$(( $(date -d 03:58 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/make_flagfile.sh > /dev/null"
         - exec: "t=$(( $(date -d 03:59 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/stop.sh reboot > /dev/null"
+
+  - name: backup-nfs-ntp002-1st-0330
+    group: backup
+    uuid: 5b0d6c1e-3a47-4f0e-9c52-1d8e7a2b6f31
+    description: "Backup of ntp002 (backup_file_nfs.sh on backup001), 1st day of month 03:30"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 30 3 1 * ? *"
+    nodefilters:
+      filter: "name: backup001"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "set -o pipefail; sudo /usr/local/script/backup_file_nfs.sh ntp002 | sudo tee -a /var/log/backup_file_ntp002.log > /dev/null"
+
+  - name: backup-nfs-ntp003-1st-0400
+    group: backup
+    uuid: 8e2f4a90-6c1b-4d73-a5e8-3f9b0c7d1e42
+    description: "Backup of ntp003 (backup_file_nfs.sh on backup001), 1st day of month 04:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 4 1 * ? *"
+    nodefilters:
+      filter: "name: backup001"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "set -o pipefail; sudo /usr/local/script/backup_file_nfs.sh ntp003 | sudo tee -a /var/log/backup_file_ntp003.log > /dev/null"
+
+  - name: backup-nfs-web001-1st-0500
+    group: backup
+    uuid: c47a19d3-0b5e-4826-b1f9-6a3d2e8c5f53
+    description: "Backup of web001 (backup_file_nfs.sh on backup001), 1st day of month 05:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 5 1 * ? *"
+    nodefilters:
+      filter: "name: backup001"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "set -o pipefail; sudo /usr/local/script/backup_file_nfs.sh web001 | sudo tee -a /var/log/backup_file_web001.log > /dev/null"
+
+  - name: backup-nfs-web002-1st-0530
+    group: backup
+    uuid: f1936b7c-2d84-4e5a-8c06-9b4e7f0a3d64
+    description: "Backup of web002 (backup_file_nfs.sh on backup001), 1st day of month 05:30"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 30 5 1 * ? *"
+    nodefilters:
+      filter: "name: backup001"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "set -o pipefail; sudo /usr/local/script/backup_file_nfs.sh web002 | sudo tee -a /var/log/backup_file_web002.log > /dev/null"
