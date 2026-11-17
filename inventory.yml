@@ -42,3 +42,8 @@ all:
         web001b:
         web002b:
         backup001:
+        gps001b:
+        dns001b:
+        dns002b:
+        cache001b:
+        raspberrypi-zabbix:
