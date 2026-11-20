@@ -141,9 +141,9 @@ rundeck_jobs:
     schedule:
       crontab: "0 57 0 ? * 1 *"
     nodefilters:
-      filter: "name: ntp001"
+      filter: "name: ntp001,dns001b"
       dispatch:
-        threadcount: "1"
+        threadcount: "2"
         keepgoing: true
     nodesSelectedByDefault: true
     sequence:
@@ -163,9 +163,9 @@ rundeck_jobs:
     schedule:
       crontab: "0 57 1 ? * 1 *"
     nodefilters:
-      filter: "name: ntp002"
+      filter: "name: ntp002,raspberrypi-zabbix,dns002b"
       dispatch:
-        threadcount: "1"
+        threadcount: "3"
         keepgoing: true
     nodesSelectedByDefault: true
     sequence:
@@ -185,9 +185,9 @@ rundeck_jobs:
     schedule:
       crontab: "0 57 2 ? * 1 *"
     nodefilters:
-      filter: "name: ntp003"
+      filter: "name: ntp003,cache001b"
       dispatch:
-        threadcount: "1"
+        threadcount: "2"
         keepgoing: true
     nodesSelectedByDefault: true
     sequence:
@@ -229,9 +229,9 @@ rundeck_jobs:
     schedule:
       crontab: "0 57 0 1 * ? *"
     nodefilters:
-      filter: "name: ntp001"
+      filter: "name: ntp001,dns001b"
       dispatch:
-        threadcount: "1"
+        threadcount: "2"
         keepgoing: true
     nodesSelectedByDefault: true
     sequence:
@@ -251,9 +251,9 @@ rundeck_jobs:
     schedule:
       crontab: "0 57 1 1 * ? *"
     nodefilters:
-      filter: "name: ntp002"
+      filter: "name: ntp002,raspberrypi-zabbix,dns002b"
       dispatch:
-        threadcount: "1"
+        threadcount: "3"
         keepgoing: true
     nodesSelectedByDefault: true
     sequence:
@@ -273,9 +273,9 @@ rundeck_jobs:
     schedule:
       crontab: "0 57 2 1 * ? *"
     nodefilters:
-      filter: "name: ntp003"
+      filter: "name: ntp003,cache001b"
       dispatch:
-        threadcount: "1"
+        threadcount: "2"
         keepgoing: true
     nodesSelectedByDefault: true
     sequence:
@@ -412,17 +412,334 @@ rundeck_jobs:
       commands:
         - exec: "set -o pipefail; sudo /usr/local/script/backup_file_nfs.sh ntp004 | sudo tee -a /var/log/backup_file_ntp004.log > /dev/null"
 
-  - name: backup-ntp001-1st-0200
+  - name: backup-1st-0200
     group: backup
     uuid: fbba68df-7f90-41e8-877c-901397c73ab0
-    description: "Backup of ntp001 (backup_file.sh on ntp001), 1st day of month 02:00"
+    description: "Backup (backup_file.sh on each node), 1st day of month 02:00"
     loglevel: INFO
     executionEnabled: true
     scheduleEnabled: true
     schedule:
       crontab: "0 0 2 1 * ? *"
     nodefilters:
-      filter: "name: ntp001"
+      filter: "name: ntp001,dns001b"
+      dispatch:
+        threadcount: "2"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "set -o pipefail; sudo /usr/local/script/backup_file.sh | sudo tee -a /var/log/backup_file.log > /dev/null"
+
+  - name: update-2sat-1200
+    group: package
+    uuid: d8b1f818-ca97-4b73-a875-2cec0247772e
+    description: "Package update (package_update.sh), 2nd Saturday 12:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 12 ? * 7#2 *"
+    nodefilters:
+      filter: "name: gps001b"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "sudo /bin/sh -c /usr/local/script/package_update.sh > /dev/null"
+
+  - name: update-4sat-1200
+    group: package
+    uuid: 6eadbf2d-1361-4016-84b8-14746aaba34c
+    description: "Package update (package_update.sh), 4th Saturday 12:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 12 ? * 7#4 *"
+    nodefilters:
+      filter: "name: gps001b"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "sudo /bin/sh -c /usr/local/script/package_update.sh > /dev/null"
+
+  - name: fullupdate-eom-1200
+    group: package
+    uuid: 3dd71c2d-93b2-46c1-8d20-d1815c8dfc83
+    description: "Package full upgrade (package_fullupdate.sh), last day of month 12:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 12 L * ? *"
+    nodefilters:
+      filter: "name: gps001b"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "sudo /bin/sh -c /usr/local/script/package_fullupdate.sh > /dev/null"
+
+  - name: update-2sat-1300
+    group: package
+    uuid: 4db7ed31-1504-43ca-9a7d-1cceb8ba7ace
+    description: "Package update (package_update.sh), 2nd Saturday 13:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 13 ? * 7#2 *"
+    nodefilters:
+      filter: "name: dns001b,dns002b"
+      dispatch:
+        threadcount: "2"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "sudo /bin/sh -c /usr/local/script/package_update.sh > /dev/null"
+
+  - name: update-4sat-1300
+    group: package
+    uuid: 4314995e-6ae0-4acc-a35e-ca7bc80d510a
+    description: "Package update (package_update.sh), 4th Saturday 13:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 13 ? * 7#4 *"
+    nodefilters:
+      filter: "name: dns001b,dns002b"
+      dispatch:
+        threadcount: "2"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "sudo /bin/sh -c /usr/local/script/package_update.sh > /dev/null"
+
+  - name: fullupdate-eom-1300
+    group: package
+    uuid: 54ab37c6-b65d-4dfb-86de-459f8daf070c
+    description: "Package full upgrade (package_fullupdate.sh), last day of month 13:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 13 L * ? *"
+    nodefilters:
+      filter: "name: dns001b,dns002b"
+      dispatch:
+        threadcount: "2"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "sudo /bin/sh -c /usr/local/script/package_fullupdate.sh > /dev/null"
+
+  - name: update-2sat-1400
+    group: package
+    uuid: 49b03021-eb55-4398-9e0c-89834e041af8
+    description: "Package update (package_update.sh), 2nd Saturday 14:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 14 ? * 7#2 *"
+    nodefilters:
+      filter: "name: raspberrypi-zabbix,cache001b"
+      dispatch:
+        threadcount: "2"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "sudo /bin/sh -c /usr/local/script/package_update.sh > /dev/null"
+
+  - name: update-4sat-1400
+    group: package
+    uuid: 10d7f84e-2e0f-4834-bf5f-06b4adc1e057
+    description: "Package update (package_update.sh), 4th Saturday 14:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 14 ? * 7#4 *"
+    nodefilters:
+      filter: "name: raspberrypi-zabbix,cache001b"
+      dispatch:
+        threadcount: "2"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "sudo /bin/sh -c /usr/local/script/package_update.sh > /dev/null"
+
+  - name: fullupdate-eom-1400
+    group: package
+    uuid: 0f6dfaaa-673f-42e2-9461-f8cee9ed8ca2
+    description: "Package full upgrade (package_fullupdate.sh), last day of month 14:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 14 L * ? *"
+    nodefilters:
+      filter: "name: raspberrypi-zabbix,cache001b"
+      dispatch:
+        threadcount: "2"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "sudo /bin/sh -c /usr/local/script/package_fullupdate.sh > /dev/null"
+
+  - name: flag-reboot-2sat-2315
+    group: reboot
+    uuid: ef18ceed-4ad2-4242-b9b6-d180d60f47f4
+    description: "make_flagfile.sh 23:15 and stop.sh reboot 23:20, 2nd Saturday (same day). Starts 23:14 and waits on the node clock"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 14 23 ? * 7#2 *"
+    nodefilters:
+      filter: "name: gps001b"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: true
+      strategy: node-first
+      commands:
+        - exec: "t=$(( $(date -d 23:15 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/make_flagfile.sh > /dev/null"
+        - exec: "t=$(( $(date -d 23:20 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/stop.sh reboot > /dev/null"
+
+  - name: reboot-4sat-2320
+    group: reboot
+    uuid: 5c89f00e-5dc9-4923-ae95-b63c480c5313
+    description: "stop.sh reboot 23:20, 4th Saturday (same day). Starts 23:19 and waits on the node clock"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 19 23 ? * 7#4 *"
+    nodefilters:
+      filter: "name: gps001b"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: true
+      strategy: node-first
+      commands:
+        - exec: "t=$(( $(date -d 23:20 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/stop.sh reboot > /dev/null"
+
+  - name: flag-reboot-eom-2315
+    group: reboot
+    uuid: 5dd0b077-21fc-4830-8bde-9bec1a4b003a
+    description: "make_flagfile.sh 23:15 and stop.sh reboot 23:20, last day of month (same day). Starts 23:14 and waits on the node clock"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 14 23 L * ? *"
+    nodefilters:
+      filter: "name: gps001b"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: true
+      strategy: node-first
+      commands:
+        - exec: "t=$(( $(date -d 23:15 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/make_flagfile.sh > /dev/null"
+        - exec: "t=$(( $(date -d 23:20 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/stop.sh reboot > /dev/null"
+
+  - name: backup-1st-0100
+    group: backup
+    uuid: 4230d172-20c3-4519-a8d1-f2ff4a6f6f2d
+    description: "Backup (backup_file.sh on each node), 1st day of month 01:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 1 1 * ? *"
+    nodefilters:
+      filter: "name: gps001b"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "set -o pipefail; sudo /usr/local/script/backup_file.sh | sudo tee -a /var/log/backup_file.log > /dev/null"
+
+  - name: backup-1st-0300
+    group: backup
+    uuid: 0a760296-1af1-4baf-8516-a114bda17429
+    description: "Backup (backup_file.sh on each node), 1st day of month 03:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 3 1 * ? *"
+    nodefilters:
+      filter: "name: raspberrypi-zabbix,dns002b"
+      dispatch:
+        threadcount: "2"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "set -o pipefail; sudo /usr/local/script/backup_file.sh | sudo tee -a /var/log/backup_file.log > /dev/null"
+
+  - name: backup-1st-0400
+    group: backup
+    uuid: 27fe4389-1cfb-4623-ac17-4603afd3452d
+    description: "Backup (backup_file.sh on each node), 1st day of month 04:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 4 1 * ? *"
+    nodefilters:
+      filter: "name: cache001b"
       dispatch:
         threadcount: "1"
         keepgoing: true
