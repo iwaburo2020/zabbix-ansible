@@ -47,3 +47,6 @@ all:
         dns002b:
         cache001b:
         raspberrypi-zabbix:
+        dhcp001b:
+        wap001b:
+        logbackup001:
