@@ -15,9 +15,9 @@ rundeck_jobs:
     schedule:
       crontab: "0 0 15 ? * 7#2 *"
     nodefilters:
-      filter: "name: ntp001,ntp002,ntp003"
+      filter: "name: ntp001,ntp002,ntp003,dhcp001b"
       dispatch:
-        threadcount: "3"
+        threadcount: "4"
         keepgoing: true
     nodesSelectedByDefault: true
     sequence:
@@ -36,9 +36,9 @@ rundeck_jobs:
     schedule:
       crontab: "0 0 15 ? * 7#4 *"
     nodefilters:
-      filter: "name: ntp001,ntp002,ntp003"
+      filter: "name: ntp001,ntp002,ntp003,dhcp001b"
       dispatch:
-        threadcount: "3"
+        threadcount: "4"
         keepgoing: true
     nodesSelectedByDefault: true
     sequence:
@@ -57,9 +57,9 @@ rundeck_jobs:
     schedule:
       crontab: "0 0 15 L * ? *"
     nodefilters:
-      filter: "name: ntp001,ntp002,ntp003"
+      filter: "name: ntp001,ntp002,ntp003,dhcp001b"
       dispatch:
-        threadcount: "3"
+        threadcount: "4"
         keepgoing: true
     nodesSelectedByDefault: true
     sequence:
@@ -207,9 +207,9 @@ rundeck_jobs:
     schedule:
       crontab: "0 57 3 ? * 1 *"
     nodefilters:
-      filter: "name: ntp004,web001b,web002b"
+      filter: "name: ntp004,web001b,web002b,dhcp001b"
       dispatch:
-        threadcount: "3"
+        threadcount: "4"
         keepgoing: true
     nodesSelectedByDefault: true
     sequence:
@@ -295,9 +295,9 @@ rundeck_jobs:
     schedule:
       crontab: "0 57 3 1 * ? *"
     nodefilters:
-      filter: "name: ntp004,web001b,web002b"
+      filter: "name: ntp004,web001b,web002b,dhcp001b"
       dispatch:
-        threadcount: "3"
+        threadcount: "4"
         keepgoing: true
     nodesSelectedByDefault: true
     sequence:
@@ -443,9 +443,9 @@ rundeck_jobs:
     schedule:
       crontab: "0 0 12 ? * 7#2 *"
     nodefilters:
-      filter: "name: gps001b"
+      filter: "name: gps001b,wap001b,backup001"
       dispatch:
-        threadcount: "1"
+        threadcount: "3"
         keepgoing: true
     nodesSelectedByDefault: true
     sequence:
@@ -464,9 +464,9 @@ rundeck_jobs:
     schedule:
       crontab: "0 0 12 ? * 7#4 *"
     nodefilters:
-      filter: "name: gps001b"
+      filter: "name: gps001b,wap001b,backup001"
       dispatch:
-        threadcount: "1"
+        threadcount: "3"
         keepgoing: true
     nodesSelectedByDefault: true
     sequence:
@@ -485,9 +485,9 @@ rundeck_jobs:
     schedule:
       crontab: "0 0 12 L * ? *"
     nodefilters:
-      filter: "name: gps001b"
+      filter: "name: gps001b,wap001b,backup001"
       dispatch:
-        threadcount: "1"
+        threadcount: "3"
         keepgoing: true
     nodesSelectedByDefault: true
     sequence:
@@ -697,9 +697,9 @@ rundeck_jobs:
     schedule:
       crontab: "0 0 1 1 * ? *"
     nodefilters:
-      filter: "name: gps001b"
+      filter: "name: gps001b,wap001b"
       dispatch:
-        threadcount: "1"
+        threadcount: "2"
         keepgoing: true
     nodesSelectedByDefault: true
     sequence:
@@ -740,6 +740,178 @@ rundeck_jobs:
       crontab: "0 0 4 1 * ? *"
     nodefilters:
       filter: "name: cache001b"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "set -o pipefail; sudo /usr/local/script/backup_file.sh | sudo tee -a /var/log/backup_file.log > /dev/null"
+
+  - name: flag-reboot-2sat-2328
+    group: reboot
+    uuid: 0006804a-cd05-4a93-93ae-f7206e646cec
+    description: "make_flagfile.sh 23:28 and stop.sh reboot 23:29, 2nd Saturday (same day). Starts 23:27 and waits on the node clock"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 27 23 ? * 7#2 *"
+    nodefilters:
+      filter: "name: backup001"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: true
+      strategy: node-first
+      commands:
+        - exec: "t=$(( $(date -d 23:28 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/make_flagfile.sh > /dev/null"
+        - exec: "t=$(( $(date -d 23:29 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/stop.sh reboot > /dev/null"
+
+  - name: reboot-4sat-2329
+    group: reboot
+    uuid: e5d7fee5-ec5a-4f8e-845c-7a32714c7604
+    description: "stop.sh reboot 23:29, 4th Saturday (same day). Starts 23:28 and waits on the node clock"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 28 23 ? * 7#4 *"
+    nodefilters:
+      filter: "name: backup001"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: true
+      strategy: node-first
+      commands:
+        - exec: "t=$(( $(date -d 23:29 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/stop.sh reboot > /dev/null"
+
+  - name: flag-reboot-eom-2328
+    group: reboot
+    uuid: 11a8e45a-d6c3-4936-b262-0bec8f984698
+    description: "make_flagfile.sh 23:28 and stop.sh reboot 23:29, last day of month (same day). Starts 23:27 and waits on the node clock"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 27 23 L * ? *"
+    nodefilters:
+      filter: "name: backup001"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: true
+      strategy: node-first
+      commands:
+        - exec: "t=$(( $(date -d 23:28 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/make_flagfile.sh > /dev/null"
+        - exec: "t=$(( $(date -d 23:29 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/stop.sh reboot > /dev/null"
+
+  - name: flag-reboot-2sat-2358
+    group: reboot
+    uuid: 303da8f6-f52d-4749-b0fb-70104882900c
+    description: "make_flagfile.sh 23:58 and stop.sh reboot 23:59, 2nd Saturday (same day). Starts 23:57 and waits on the node clock"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 57 23 ? * 7#2 *"
+    nodefilters:
+      filter: "name: wap001b"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: true
+      strategy: node-first
+      commands:
+        - exec: "t=$(( $(date -d 23:58 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/make_flagfile.sh > /dev/null"
+        - exec: "t=$(( $(date -d 23:59 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/stop.sh reboot > /dev/null"
+
+  - name: reboot-4sat-2359
+    group: reboot
+    uuid: e3e71c18-a451-4226-bcc9-949ff6dee28f
+    description: "stop.sh reboot 23:59, 4th Saturday (same day). Starts 23:58 and waits on the node clock"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 58 23 ? * 7#4 *"
+    nodefilters:
+      filter: "name: wap001b"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: true
+      strategy: node-first
+      commands:
+        - exec: "t=$(( $(date -d 23:59 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/stop.sh reboot > /dev/null"
+
+  - name: flag-reboot-eom-2358
+    group: reboot
+    uuid: d490fbf0-3ece-4b4d-9088-3bf6fd756d68
+    description: "make_flagfile.sh 23:58 and stop.sh reboot 23:59, last day of month (same day). Starts 23:57 and waits on the node clock"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 57 23 L * ? *"
+    nodefilters:
+      filter: "name: wap001b,logbackup001"
+      dispatch:
+        threadcount: "2"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: true
+      strategy: node-first
+      commands:
+        - exec: "t=$(( $(date -d 23:58 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/make_flagfile.sh > /dev/null"
+        - exec: "t=$(( $(date -d 23:59 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/stop.sh reboot > /dev/null"
+
+  - name: backup-1st-0150
+    group: backup
+    uuid: b9688821-bdc4-4e40-85e6-fb2ee9d617d8
+    description: "Backup (backup_file.sh on each node), 1st day of month 01:50"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 50 1 1 * ? *"
+    nodefilters:
+      filter: "name: backup001"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "set -o pipefail; sudo /usr/local/script/backup_file.sh | sudo tee -a /var/log/backup_file.log > /dev/null"
+
+  - name: backup-1st-0500
+    group: backup
+    uuid: ca952ec5-916a-4ef4-928f-f03eaad05f00
+    description: "Backup (backup_file.sh on each node), 1st day of month 05:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 5 1 * ? *"
+    nodefilters:
+      filter: "name: dhcp001b"
       dispatch:
         threadcount: "1"
         keepgoing: true
