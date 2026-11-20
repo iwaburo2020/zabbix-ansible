@@ -201,7 +201,9 @@
 | 2 | 2026-11-29(日)の結果の確認。nas001b が 0:29 に再起動したこと(Rundeck の `flag-reboot-sun-0028`)、proxy001b の 5:59 の再起動、NFS ブートのサーバー(ntp002、ntp003、ntp004、web001b、web002b)の再起動の時刻(Zabbix の「has been restarted」)、5:00 ごろの再起動が無くなったこと |
 | 3 | 2026-11-30(月末日)の結果の確認。12:00〜18:00 のパッケージ更新、23:20・23:29・23:59 の当日の再起動(gps001b、backup001、wap001b、logbackup001)、raspberrypi-desktop の 20:00 の更新・21:59 の再起動・23:00 のバックアップ |
 | 4 | 2026-12-01 の初回の実行結果の確認(毎月1日のフラグ作成・再起動のジョブ6つ、バックアップのジョブ13個) |
-| 5 | ジョブにしていない処理の移行検討。利用者の方針(2026-11-17):`lan.sh` はジョブにしない、`roothints.sh`(dns001b、dns002b、cache001b)はジョブにする、proxy001b の `chk_umnt.sh`・`chk_mnt.sh` は廃止する、gps001b の `system_restart.sh` は移行を検討する、logbackup001 の `chronyc makestep` は時刻同期が定期的に行われていることを確認できれば廃止する |
+| 5 | ジョブにしていない処理の移行検討。利用者の方針(2026-11-17):`lan.sh` はジョブにしない、`roothints.sh`(dns001b、dns002b)はジョブにする、proxy001b の `chk_umnt.sh`・`chk_mnt.sh` は廃止する、gps001b の `system_restart.sh` は移行を検討する、logbackup001 の `chronyc makestep` は時刻同期が定期的に行われていることを確認できれば廃止する |
+
+- cache001b の `roothints.sh`(cron ではなく systemd から起動)は、ジョブにしない(2026-11-21 利用者が決定)。11/17 の方針では dns001b・dns002b とそろえてジョブにする予定だったが、生成AIが、cache001b の起動方法が他の2台と違うことを問題であるかのように取り上げて対応を混乱させたため、ジョブ化をやめた。cache001b の `roothints.sh` は今の起動方法のまま変更しない
 
 ## 9. NFS ブートのサーバーが 5:00 ごろにもう一度再起動していた件(2026-11-15)
 
