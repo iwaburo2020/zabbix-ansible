@@ -50,3 +50,5 @@ all:
         dhcp001b:
         wap001b:
         logbackup001:
+        nas001b:
+        proxy001b:
