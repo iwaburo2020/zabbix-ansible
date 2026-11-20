@@ -921,3 +921,259 @@ rundeck_jobs:
       strategy: node-first
       commands:
         - exec: "set -o pipefail; sudo /usr/local/script/backup_file.sh | sudo tee -a /var/log/backup_file.log > /dev/null"
+
+  - name: update-2sat-1700
+    group: package
+    uuid: 1b96d61e-efc6-4e48-a792-143fa47fe89f
+    description: "Package update (package_update.sh), 2nd Saturday 17:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 17 ? * 7#2 *"
+    nodefilters:
+      filter: "name: nas001b"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "sudo /bin/sh -c /usr/local/script/package_update.sh > /dev/null"
+
+  - name: update-4sat-1700
+    group: package
+    uuid: 186a41e6-2223-44a7-9524-d0912aa78629
+    description: "Package update (package_update.sh), 4th Saturday 17:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 17 ? * 7#4 *"
+    nodefilters:
+      filter: "name: nas001b"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "sudo /bin/sh -c /usr/local/script/package_update.sh > /dev/null"
+
+  - name: fullupdate-eom-1700
+    group: package
+    uuid: 234bb1bc-d15d-4555-b10a-596214186fe6
+    description: "Package full upgrade (package_fullupdate.sh), last day of month 17:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 17 L * ? *"
+    nodefilters:
+      filter: "name: nas001b"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "sudo /bin/sh -c /usr/local/script/package_fullupdate.sh > /dev/null"
+
+  - name: update-2sat-1800
+    group: package
+    uuid: aaf26686-004d-457f-a010-8ebf70248b0d
+    description: "Package update (package_update.sh), 2nd Saturday 18:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 18 ? * 7#2 *"
+    nodefilters:
+      filter: "name: proxy001b"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "sudo /bin/sh -c /usr/local/script/package_update.sh > /dev/null"
+
+  - name: update-4sat-1800
+    group: package
+    uuid: e523ba87-52f4-48ff-b81d-0b39edeec0ec
+    description: "Package update (package_update.sh), 4th Saturday 18:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 18 ? * 7#4 *"
+    nodefilters:
+      filter: "name: proxy001b"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "sudo /bin/sh -c /usr/local/script/package_update.sh > /dev/null"
+
+  - name: fullupdate-eom-1800
+    group: package
+    uuid: 3dd6a254-304c-41dd-8f1f-37b1542c5f76
+    description: "Package full upgrade (package_fullupdate.sh), last day of month 18:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 18 L * ? *"
+    nodefilters:
+      filter: "name: proxy001b"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "sudo /bin/sh -c /usr/local/script/package_fullupdate.sh > /dev/null"
+
+  - name: flag-reboot-sun-0028
+    group: reboot
+    uuid: 4dd1d400-619a-4eb7-9abf-1508838a308d
+    description: "make_flagfile.sh 00:28 (day 9-15) and stop.sh reboot 00:29 (day 9-15, 23-29), Sunday. Starts 00:27 and waits on the node clock"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 27 0 ? * 1 *"
+    nodefilters:
+      filter: "name: nas001b"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: true
+      strategy: node-first
+      commands:
+        - exec: "d=$(date +%-d); case $d in 9|1[0-5]) t=$(( $(date -d 00:28 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/make_flagfile.sh > /dev/null ;; *) echo skip: day $d ;; esac"
+        - exec: "d=$(date +%-d); case $d in 9|1[0-5]|2[3-9]) t=$(( $(date -d 00:29 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/stop.sh reboot > /dev/null ;; *) echo skip: day $d ;; esac"
+
+  - name: flag-reboot-1st-0028
+    group: reboot
+    uuid: 09817bff-d4ab-424d-9961-4acd089cb341
+    description: "make_flagfile.sh 00:28 and stop.sh reboot 00:29, 1st day of month. Starts 00:27 and waits on the node clock"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 27 0 1 * ? *"
+    nodefilters:
+      filter: "name: nas001b"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: true
+      strategy: node-first
+      commands:
+        - exec: "t=$(( $(date -d 00:28 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/make_flagfile.sh > /dev/null"
+        - exec: "t=$(( $(date -d 00:29 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/stop.sh reboot > /dev/null"
+
+  - name: flag-reboot-sun-0558
+    group: reboot
+    uuid: 0c87957e-a061-40bc-b642-2629dae83d10
+    description: "make_flagfile.sh 05:58 (day 9-15, 23-29) and stop.sh reboot 05:59 (day 9-15, 23-29), Sunday. Starts 05:57 and waits on the node clock"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 57 5 ? * 1 *"
+    nodefilters:
+      filter: "name: proxy001b"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: true
+      strategy: node-first
+      commands:
+        - exec: "d=$(date +%-d); case $d in 9|1[0-5]|2[3-9]) t=$(( $(date -d 05:58 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/make_flagfile.sh > /dev/null ;; *) echo skip: day $d ;; esac"
+        - exec: "d=$(date +%-d); case $d in 9|1[0-5]|2[3-9]) t=$(( $(date -d 05:59 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/stop.sh reboot > /dev/null ;; *) echo skip: day $d ;; esac"
+
+  - name: flag-reboot-1st-0558
+    group: reboot
+    uuid: c5e3323d-4321-407b-a169-fb66170b93b0
+    description: "make_flagfile.sh 05:58 and stop.sh reboot 05:59, 1st day of month. Starts 05:57 and waits on the node clock"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 57 5 1 * ? *"
+    nodefilters:
+      filter: "name: proxy001b"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: true
+      strategy: node-first
+      commands:
+        - exec: "t=$(( $(date -d 05:58 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/make_flagfile.sh > /dev/null"
+        - exec: "t=$(( $(date -d 05:59 +%s) - $(date +%s) )); if [ $t -gt 0 ]; then sleep $t; else echo late: $t sec; fi; sudo /usr/local/script/stop.sh reboot > /dev/null"
+
+  - name: backup-1st-0600
+    group: backup
+    uuid: 4c76d63c-54c7-4d18-8c13-5de36e865955
+    description: "Backup (backup_file.sh on each node), 1st day of month 06:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 6 1 * ? *"
+    nodefilters:
+      filter: "name: nas001b"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "set -o pipefail; sudo /usr/local/script/backup_file.sh | sudo tee -a /var/log/backup_file.log > /dev/null"
+
+  - name: backup-1st-0700
+    group: backup
+    uuid: b51da811-43b5-45ad-855a-76d687df6e3e
+    description: "Backup (backup_file.sh on each node), 1st day of month 07:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 7 1 * ? *"
+    nodefilters:
+      filter: "name: proxy001b"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "set -o pipefail; sudo /usr/local/script/backup_file.sh | sudo tee -a /var/log/backup_file.log > /dev/null"
