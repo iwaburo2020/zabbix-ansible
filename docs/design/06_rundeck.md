@@ -68,7 +68,7 @@
 
 - ジョブの詳細設計(対象ホスト、ジョブの分け方、スケジュールの書き方、再起動ジョブの扱いなど)
 
-## 7. 導入と移行の結果(2026-11-10〜2026-11-20)
+## 7. 導入と移行の結果(2026-11-10〜2026-11-21)
 
 ### 7.1 Rundeck 本体
 
@@ -102,6 +102,7 @@
 | `rundeck_desktop_cron_monthly.yml` | raspberrypi-desktop の定期処理を月末日だけの実行に変更する(5.1) |
 | `rundeck_nas_cron_reboot_time.yml` | nas001b のフラグ作成・再起動を 0:28・0:29 に変更する(9章) |
 | `rundeck_proxy_cron_nfs_time.yml` | proxy001b の `chk_umnt.sh`・`chk_mnt.sh` を 0:20・0:40 に変更する(9章) |
+| `rundeck_cron_misc_off.yml` | root の crontab の `roothints.sh`(dns001b、dns002b)、`system_restart.sh`(gps001b)、`chk_umnt.sh`・`chk_mnt.sh`(proxy001b)、`chronyc makestep`(logbackup001)の行をコメントにする |
 
 ### 7.3 ノード(17台)
 
@@ -113,7 +114,7 @@
 
 - 接続ユーザーとポートは inventory と同じ。17台とも Rundeck 用の鍵で接続し、パスワードなしの sudo が使えることを確認済み
 
-### 7.4 ジョブ(55個、すべてスケジュール有効)
+### 7.4 ジョブ(58個、すべてスケジュール有効)
 
 時刻・対象・コマンドは、移行前の cron と同じ。同じ時刻のノードは1つのジョブにまとめ、同時実行数を台数にしている。
 
@@ -146,10 +147,15 @@
 | 〃 | `backup-1st-0600` | 毎月1日 6:00 | nas001b |
 | 〃 | `backup-1st-0700` | 毎月1日 7:00 | proxy001b |
 | NFS ブートのホストのバックアップ(backup001 上で `backup_file_nfs.sh <ホスト>`) | `backup-nfs-ntp002-1st-0330`、`backup-nfs-ntp003-1st-0400`、`backup-nfs-ntp004-1st-0430`、`backup-nfs-web001-1st-0500`、`backup-nfs-web002-1st-0530` | 毎月1日 3:30・4:00・4:30・5:00・5:30 | backup001 |
+| ルートヒントの更新(`roothints.sh`) | `roothints-sat-2359` | 毎週土曜 23:59 | dns001b |
+| 〃 | `roothints-sun-2359` | 毎週日曜 23:59 | dns002b |
+| GPS 用の再起動・設定の切り替え(`system_restart.sh`) | `system-restart-hourly-59` | 毎時59分 | gps001b |
 
 - `backup-nfs-ntp004-1st-0430` は cron に定義が無かった。時刻はスケジュール表の 4:30
 - `backup-1st-0200` は、2026-11-15 に `backup-ntp001-1st-0200` として登録し、2026-11-20 に dns001b を加えて名前を変えた(uuid は同じ)
-- gps001b の 23:20 の再起動は、23:59 の `system_restart.sh`(cron のまま)による2回目の再起動の前提になるため、時刻を変えていない
+- gps001b の 23:20 の再起動は、23:59 の `system_restart.sh`(2026-11-21 から Rundeck の `system-restart-hourly-59`)による2回目の再起動の前提になるため、時刻を変えていない
+- `roothints-sat-2359`、`roothints-sun-2359`、`system-restart-hourly-59` は 2026-11-21 に追加した。cache001b の `roothints.sh`(systemd から起動)はジョブにしない(8章)
+- `system-restart-hourly-59` が月末日の 21:59(raspberrypi-desktop の再起動の時刻)に実行されなくても、1回分を飛ばすだけで影響はない(gps001b の流れは 23:20 の再起動が起点)
 - logbackup001 は、移行前の cron と同じく月末日の再起動だけ(パッケージ更新とバックアップの行は cron に無かった)
 - フラグ作成・再起動のジョブは、予定の時刻より前に起動し、対象ノードの時計で予定の時刻まで待ってから実行する。予定の時刻を過ぎていても実行する。フラグ作成が失敗しても再起動は実行する(cron と同じ動き)
 - 日曜のジョブは毎週起動し、日付が条件に合わない日は `skip: day <日>` と表示して終わる
@@ -161,6 +167,8 @@
 - パッケージ更新:`sudo /bin/sh -c /usr/local/script/package_update.sh > /dev/null`
 - バックアップ:`set -o pipefail; sudo /usr/local/script/backup_file_nfs.sh <ホスト> | sudo tee -a /var/log/backup_file_<ホスト>.log > /dev/null`(cron の `>>` と同じログファイルに追記する。スクリプトのエラー出力は Rundeck の実行ログに残る)
 - 自分自身のバックアップ:`set -o pipefail; sudo /usr/local/script/backup_file.sh | sudo tee -a /var/log/backup_file.log > /dev/null`
+- `roothints.sh`:`sudo /usr/local/script/roothints.sh > /dev/null`
+- `system_restart.sh`:`set -o pipefail; sudo /usr/local/script/system_restart.sh | sudo tee /var/log/system_restart2.log > /dev/null`(cron の `>` と同じく、ログファイルを毎回上書きする)
 
 ### 7.6 cron の変更
 
@@ -178,9 +186,13 @@
 | logbackup001 | `/etc/crontab` | 月末日のフラグ作成・再起動2行をコメントにした(2026-11-20) | `/etc/crontab.bk20261120` |
 | nas001b | `/etc/crontab`、root の crontab | パッケージ更新3行、フラグ作成・再起動5行、毎月1日の `backup_file.sh` の行をコメントにした(2026-11-20) | `/etc/crontab.bk20261120` |
 | proxy001b | `/etc/crontab`、root の crontab | パッケージ更新3行、フラグ作成・再起動6行、毎月1日の `backup_file.sh` の行をコメントにした(2026-11-20) | `/etc/crontab.bk20261120` |
+| dns001b、dns002b | root の crontab | `roothints.sh` の行(dns001b は毎週土曜 23:59、dns002b は毎週日曜 23:59)をコメントにした(2026-11-21。Rundeck のジョブへ移行) | なし(crontab コマンドで変更) |
+| gps001b | root の crontab | `system_restart.sh` の行(毎時59分)をコメントにした(2026-11-21。Rundeck のジョブへ移行) | なし(crontab コマンドで変更) |
+| proxy001b | root の crontab | `chk_umnt.sh`(毎週日曜 0:20)と `chk_mnt.sh`(毎週日曜 0:40)の行をコメントにした(2026-11-21。廃止) | なし(crontab コマンドで変更) |
+| logbackup001 | root の crontab | `chronyc makestep`(30分ごと)の行をコメントにした(2026-11-21。廃止。chronyd が定期的に時刻同期していることを確認:`chronyc sources` の同期先 `^*` の Reach が 377、`Leap status` が Normal) | なし(crontab コマンドで変更) |
 
 - root の crontab は crontab コマンドで変更したため、変更前のコピーは無い
-- `/etc/crontab` と root の crontab の変更は、`rundeck_cron_package_off.yml`、`rundeck_cron_reboot_off.yml`、`rundeck_cron_backup_self_off.yml` で行った(proxy001b は `-e cron_expected_lines=6`、logbackup001 は `-e cron_expected_lines=2` で `rundeck_cron_reboot_off.yml` だけを実行)
+- `/etc/crontab` と root の crontab の変更は、`rundeck_cron_package_off.yml`、`rundeck_cron_reboot_off.yml`、`rundeck_cron_backup_self_off.yml` で行った(proxy001b は `-e cron_expected_lines=6`、logbackup001 は `-e cron_expected_lines=2` で `rundeck_cron_reboot_off.yml` だけを実行)。2026-11-21 の変更は `rundeck_cron_misc_off.yml` で行った
 
 ### 7.7 実行結果
 
@@ -189,19 +201,19 @@
 | 2026-11-14 | パッケージ更新(第2土曜、15:00 と 16:00) | 6台とも成功 |
 | 2026-11-15 | フラグ作成・再起動(日曜) | 4つのジョブとも成功。Zabbix の「has been restarted」の検知時刻は、cron で実行した 2026-11-01 とほぼ同じ(差は最大10秒) |
 
-まだ実行されていないジョブ:2026-11-18〜2026-11-20 に追加・変更したジョブのすべてと、第4土曜と月末日のパッケージ更新(初回 2026-11-28、2026-11-30)、当日の再起動(初回 2026-11-28 の第4土曜)、毎月1日のフラグ作成・再起動とバックアップ(初回 2026-12-01)
+まだ実行されていないジョブ:2026-11-18〜2026-11-21 に追加・変更したジョブのすべて(`system-restart-hourly-59` は登録後の毎時59分から実行)と、第4土曜と月末日のパッケージ更新(初回 2026-11-28、2026-11-30)、当日の再起動(初回 2026-11-28 の第4土曜)、毎月1日のフラグ作成・再起動とバックアップ(初回 2026-12-01)
 
-変更後の cron の初回の実行:nas001b の再起動 2026-11-29 0:29(proxy001b の `chk_umnt.sh` 0:20、`chk_mnt.sh` 0:40)、raspberrypi-desktop の更新・再起動・バックアップ 2026-11-30 20:00〜23:00
+変更後の cron の初回の実行:nas001b の再起動 2026-11-29 0:29(proxy001b の `chk_umnt.sh`・`chk_mnt.sh` は 2026-11-21 に廃止)、raspberrypi-desktop の更新・再起動・バックアップ 2026-11-30 20:00〜23:00
 
-## 8. 引き継ぎ課題(2026-11-20 時点)
+## 8. 引き継ぎ課題(2026-11-21 時点)
 
 | No | 内容 |
 |---|---|
-| 1 | 2026-11-28(第4土曜)の結果の確認。12:00〜18:00 のパッケージ更新(17台)、23:20・23:29・23:59 の当日の再起動(gps001b、backup001、wap001b) |
+| 1 | 2026-11-28(第4土曜)の結果の確認。12:00〜18:00 のパッケージ更新(17台)、23:20・23:29・23:59 の当日の再起動(gps001b、backup001、wap001b)、`system-restart-hourly-59` による gps001b の 23:59 の2回目の再起動と、翌日 0:59 の GPS 用の設定への切り替え。`roothints-sat-2359`(dns001b、2026-11-21 から)と `roothints-sun-2359`(dns002b、2026-11-22 から)の実行結果 |
 | 2 | 2026-11-29(日)の結果の確認。nas001b が 0:29 に再起動したこと(Rundeck の `flag-reboot-sun-0028`)、proxy001b の 5:59 の再起動、NFS ブートのサーバー(ntp002、ntp003、ntp004、web001b、web002b)の再起動の時刻(Zabbix の「has been restarted」)、5:00 ごろの再起動が無くなったこと |
 | 3 | 2026-11-30(月末日)の結果の確認。12:00〜18:00 のパッケージ更新、23:20・23:29・23:59 の当日の再起動(gps001b、backup001、wap001b、logbackup001)、raspberrypi-desktop の 20:00 の更新・21:59 の再起動・23:00 のバックアップ |
 | 4 | 2026-12-01 の初回の実行結果の確認(毎月1日のフラグ作成・再起動のジョブ6つ、バックアップのジョブ13個) |
-| 5 | ジョブにしていない処理の移行検討。利用者の方針(2026-11-17):`lan.sh` はジョブにしない、`roothints.sh`(dns001b、dns002b)はジョブにする、proxy001b の `chk_umnt.sh`・`chk_mnt.sh` は廃止する、gps001b の `system_restart.sh` は移行を検討する、logbackup001 の `chronyc makestep` は時刻同期が定期的に行われていることを確認できれば廃止する |
+| 5 | ジョブにしていない処理の移行は完了(2026-11-21)。利用者の方針(2026-11-17)どおり、`roothints.sh`(dns001b、dns002b)と `system_restart.sh`(gps001b)はジョブにし、proxy001b の `chk_umnt.sh`・`chk_mnt.sh` と logbackup001 の `chronyc makestep` は廃止した。`lan.sh` はジョブにしない |
 
 - cache001b の `roothints.sh`(cron ではなく systemd から起動)は、ジョブにしない(2026-11-21 利用者が決定)。11/17 の方針では dns001b・dns002b とそろえてジョブにする予定だったが、生成AIが、cache001b の起動方法が他の2台と違うことを問題であるかのように取り上げて対応を混乱させたため、ジョブ化をやめた。cache001b の `roothints.sh` は今の起動方法のまま変更しない
 
