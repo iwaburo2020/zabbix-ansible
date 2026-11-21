@@ -1,0 +1,65 @@
+---
+# ジョブにしていない処理の移行(2026-11-21)
+# root の crontab の次の行を、行頭 # でコメントにする(crontab コマンドで変更するため、コピーは取らない)
+#   dns001b、dns002b: roothints.sh(Rundeck のジョブ roothints-sat-2359、roothints-sun-2359 へ移行)
+#   gps001b: system_restart.sh(Rundeck のジョブ system-restart-hourly-59 へ移行)
+#   proxy001b: chk_umnt.sh、chk_mnt.sh(廃止)
+#   logbackup001: chronyc makestep(廃止。chronyd が定期的に時刻同期していることを確認済み)
+# 有効な行が想定の行数でも、コメント済みの0行でもない場合は、何も変更せずに中止する
+# 実行: ansible-playbook rundeck_cron_misc_off.yml -e cutover_hosts=<ホスト名(カンマ区切りで複数可)>
+- name: rundeck_cron_misc_off
+  hosts: "{{ cutover_hosts }}"
+  gather_facts: false
+  vars:
+    misc_off:
+      dns001b: { pattern: '/usr/local/script/roothints\.sh', lines: 1 }
+      dns002b: { pattern: '/usr/local/script/roothints\.sh', lines: 1 }
+      gps001b: { pattern: '/usr/local/script/system_restart\.sh', lines: 1 }
+      proxy001b: { pattern: '/home/script/chk_u?mnt\.sh', lines: 2 }
+      logbackup001: { pattern: '/usr/bin/chronyc\s+makestep', lines: 1 }
+    off_regexp: '^([^#\n][^\n]*{{ misc_off[inventory_hostname].pattern }}[^\n]*)$'
+    off_replace: '#\g<1>'
+  tasks:
+    - name: 対象のホストか確認する
+      ansible.builtin.assert:
+        that: inventory_hostname in misc_off
+        fail_msg: "{{ inventory_hostname }} はこの playbook の対象ではありません。変更せずに中止します"
+        quiet: true
+
+    - name: root の crontab の現在の内容を取得する(crontab -l -u root)
+      ansible.builtin.command: crontab -l -u root
+      register: crontab_now
+      changed_when: false
+
+    - name: 対象の行を表示(変更前)
+      ansible.builtin.debug:
+        msg: "{{ crontab_now.stdout_lines | select('search', misc_off[inventory_hostname].pattern) | list }}"
+
+    - name: 有効な行の数を数える
+      ansible.builtin.set_fact:
+        off_count: "{{ crontab_now.stdout | regex_findall(off_regexp, multiline=True) | length }}"
+
+    - name: 行数の確認(想定の行数、またはコメント済みで0行)
+      ansible.builtin.assert:
+        that: (off_count | int) in [0, misc_off[inventory_hostname].lines]
+        fail_msg: "有効な行が {{ off_count }} 行です(想定は {{ misc_off[inventory_hostname].lines }} 行)。変更せずに中止します"
+        quiet: true
+
+    - name: 変更後の内容を登録する(対象の行をコメントにして crontab -u root -)
+      ansible.builtin.command:
+        cmd: crontab -u root -
+        stdin: "{{ crontab_now.stdout | regex_replace(off_regexp, off_replace, multiline=True) }}"
+      when: (off_count | int) > 0
+
+    - name: root の crontab の内容を取得する(変更後)
+      ansible.builtin.command: crontab -l -u root
+      register: crontab_after
+      changed_when: false
+
+    - name: 対象の行を表示(変更後)
+      ansible.builtin.debug:
+        msg: "{{ crontab_after.stdout_lines | select('search', misc_off[inventory_hostname].pattern) | list }}"
+
+    - name: 行数を表示(変更前と変更後)
+      ansible.builtin.debug:
+        msg: "変更前 {{ crontab_now.stdout_lines | length }} 行 / 変更後 {{ crontab_after.stdout_lines | length }} 行"

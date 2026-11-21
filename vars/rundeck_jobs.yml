@@ -1177,3 +1177,66 @@ rundeck_jobs:
       strategy: node-first
       commands:
         - exec: "set -o pipefail; sudo /usr/local/script/backup_file.sh | sudo tee -a /var/log/backup_file.log > /dev/null"
+
+  - name: roothints-sat-2359
+    group: dns
+    uuid: 86e1255c-225a-4443-9662-3876d196d7bf
+    description: "Root hints update (roothints.sh), every Saturday 23:59"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 59 23 ? * 7 *"
+    nodefilters:
+      filter: "name: dns001b"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "sudo /usr/local/script/roothints.sh > /dev/null"
+
+  - name: roothints-sun-2359
+    group: dns
+    uuid: 925be215-42c3-4971-8f42-2cc21e4b2537
+    description: "Root hints update (roothints.sh), every Sunday 23:59"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 59 23 ? * 1 *"
+    nodefilters:
+      filter: "name: dns002b"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "sudo /usr/local/script/roothints.sh > /dev/null"
+
+  - name: system-restart-hourly-59
+    group: gps
+    uuid: dbce6a9c-254a-4b3b-be7f-1d6e56dbbf51
+    description: "GPS restart check (system_restart.sh), every hour at minute 59"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 59 * * * ? *"
+    nodefilters:
+      filter: "name: gps001b"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "set -o pipefail; sudo /usr/local/script/system_restart.sh | sudo tee /var/log/system_restart2.log > /dev/null"
