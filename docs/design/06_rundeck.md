@@ -114,7 +114,7 @@
 
 - 接続ユーザーとポートは inventory と同じ。17台とも Rundeck 用の鍵で接続し、パスワードなしの sudo が使えることを確認済み
 
-### 7.4 ジョブ(58個、すべてスケジュール有効)
+### 7.4 ジョブ(59個、すべてスケジュール有効)
 
 時刻・対象・コマンドは、移行前の cron と同じ。同じ時刻のノードは1つのジョブにまとめ、同時実行数を台数にしている。
 
@@ -147,6 +147,7 @@
 | 〃 | `backup-1st-0600` | 毎月1日 6:00 | nas001b |
 | 〃 | `backup-1st-0700` | 毎月1日 7:00 | proxy001b |
 | NFS ブートのホストのバックアップ(backup001 上で `backup_file_nfs.sh <ホスト>`) | `backup-nfs-ntp002-1st-0330`、`backup-nfs-ntp003-1st-0400`、`backup-nfs-ntp004-1st-0430`、`backup-nfs-web001-1st-0500`、`backup-nfs-web002-1st-0530` | 毎月1日 3:30・4:00・4:30・5:00・5:30 | backup001 |
+| logbackup001 に収集したログの保管(`log_archive.sh`) | `log-archive-1st-0800` | 毎月1日 8:00 | logbackup001 |
 | ルートヒントの更新(`roothints.sh`) | `roothints-sat-2359` | 毎週土曜 23:59 | dns001b |
 | 〃 | `roothints-sun-2359` | 毎週日曜 23:59 | dns002b |
 | GPS 用の再起動・設定の切り替え(`system_restart.sh`) | `system-restart-hourly-59` | 毎時59分 | gps001b |
@@ -157,6 +158,7 @@
 - `roothints-sat-2359`、`roothints-sun-2359`、`system-restart-hourly-59` は 2026-11-21 に追加した。cache001b の `roothints.sh`(systemd から起動)はジョブにしない(8章)
 - `system-restart-hourly-59` が月末日の 21:59(raspberrypi-desktop の再起動の時刻)に実行されなくても、1回分を飛ばすだけで影響はない(gps001b の流れは 23:20 の再起動が起点)
 - logbackup001 は、移行前の cron と同じく月末日の再起動だけ(パッケージ更新とバックアップの行は cron に無かった)
+- `log-archive-1st-0800` は cron からの移行ではなく、2026-11-23 に新しく追加した(10章)
 - フラグ作成・再起動のジョブは、予定の時刻より前に起動し、対象ノードの時計で予定の時刻まで待ってから実行する。予定の時刻を過ぎていても実行する。フラグ作成が失敗しても再起動は実行する(cron と同じ動き)
 - 日曜のジョブは毎週起動し、日付が条件に合わない日は `skip: day <日>` と表示して終わる
 
@@ -169,6 +171,7 @@
 - 自分自身のバックアップ:`set -o pipefail; sudo /usr/local/script/backup_file.sh | sudo tee -a /var/log/backup_file.log > /dev/null`
 - `roothints.sh`:`sudo /usr/local/script/roothints.sh > /dev/null`
 - `system_restart.sh`:`set -o pipefail; sudo /usr/local/script/system_restart.sh | sudo tee /var/log/system_restart2.log > /dev/null`(cron の `>` と同じく、ログファイルを毎回上書きする)
+- `log_archive.sh`:`set -o pipefail; sudo /usr/local/script/log_archive.sh | sudo tee -a /var/log/log_archive.log > /dev/null`(手動実行のときと同じログファイルに追記する)
 
 ### 7.6 cron の変更
 
@@ -205,7 +208,7 @@
 
 変更後の cron の初回の実行:nas001b の再起動 2026-11-29 0:29(proxy001b の `chk_umnt.sh`・`chk_mnt.sh` は 2026-11-21 に廃止)、raspberrypi-desktop の更新・再起動・バックアップ 2026-11-30 20:00〜23:00
 
-## 8. 引き継ぎ課題(2026-11-21 時点)
+## 8. 引き継ぎ課題(2026-11-23 時点)
 
 | No | 内容 |
 |---|---|
@@ -214,6 +217,7 @@
 | 3 | 2026-11-30(月末日)の結果の確認。12:00〜18:00 のパッケージ更新、23:20・23:29・23:59 の当日の再起動(gps001b、backup001、wap001b、logbackup001)、raspberrypi-desktop の 20:00 の更新・21:59 の再起動・23:00 のバックアップ |
 | 4 | 2026-12-01 の初回の実行結果の確認(毎月1日のフラグ作成・再起動のジョブ6つ、バックアップのジョブ13個) |
 | 5 | ジョブにしていない処理の移行は完了(2026-11-21)。利用者の方針(2026-11-17)どおり、`roothints.sh`(dns001b、dns002b)と `system_restart.sh`(gps001b)はジョブにし、proxy001b の `chk_umnt.sh`・`chk_mnt.sh` と logbackup001 の `chronyc makestep` は廃止した。`lan.sh` はジョブにしない |
+| 6 | 2026-12-01 8:00 の `log-archive-1st-0800` の初回の実行結果の確認。11月分を NAS に保管し、9月分を logbackup001 から削除する(10月・11月・12月分が残る) |
 
 - cache001b の `roothints.sh`(cron ではなく systemd から起動)は、ジョブにしない(2026-11-21 利用者が決定)。11/17 の方針では dns001b・dns002b とそろえてジョブにする予定だったが、生成AIが、cache001b の起動方法が他の2台と違うことを問題であるかのように取り上げて対応を混乱させたため、ジョブ化をやめた。cache001b の `roothints.sh` は今の起動方法のまま変更しない
 
@@ -250,3 +254,56 @@ nas001b が再起動で止まっている約2分の間、`/` を nas001 に置�
 - 毎月1日 5:00 のバックアップ(web001、dhcp001b)が、nas001b の再起動(今までは 4:59)の直後に始まる状態も無くなった
 - NFS ブートのサーバーが nas001b の再起動時(0:30 ごろ)に再起動すること自体は残る。その後に予定の再起動を行うため、予定の再起動のあとにもう一度再起動することは無くなる
 - 23〜29日の日曜は、NFS ブートのサーバーの予定の再起動が行われない場合がある。0:30 ごろに再起動すると起動時に `/etc/rc.local` が `/var/tmp/reboot` を削除し、この日は `make_flagfile.sh` を実行しないため(`stop.sh reboot` は `/var/tmp/reboot` があるときだけ再起動する)。その場合は、0:30 ごろの再起動が更新後の再起動になる
+
+## 10. logbackup001 に収集したログの保管(2026-11-21〜2026-11-23)
+
+### 10.1 利用者の設計
+
+- logbackup001 は、ネットワーク機器を含め Windows を除く全サーバーのログを rsyslog で `/log_backup/<ディレクトリ>/YYYYMMDD_messages.log` に収集している。これをサーバー上に溜めず、月ごとにアーカイブ(tar.gz)して保管先に格納する
+- 転送経路は logbackup001 → proxyvm001 → NAS(logbackup001 から NAS へ直接書き込まない)。proxyvm001 にはログを残さない
+- 保管先の容量をもとに保管期間を決め、過ぎたファイルは削除する
+- logbackup001 の `/log_backup` には、当月を含めて残す。実行は翌月の初旬に前月分を行う
+- 自動化したものを Rundeck のジョブで管理する
+- 初代のログバックアップサーバー log001 のログを先に処理する
+
+### 10.2 構成
+
+| 項目 | 内容 |
+|---|---|
+| アーカイブの作成場所 | logbackup001 に接続した外付けHDD(BUFFALO HD-LDS-A、931.5G)。XFS(ラベル `log_archive`)で `/log_archive` にマウント。`/etc/fstab` に `UUID=b9ebb933-3fd0-4fbe-ab59-26383c28b871 /log_archive xfs defaults,nofail 0 0` を追加(変更前のコピーは `/etc/fstab.bk20261122`) |
+| 受け取り | proxyvm001(192.168.200.15)の `D:\log_archive`。1ファイルずつ受け取り、NAS で SHA256 の一致を確認したら削除する |
+| 保管先 | NAS(アイオーデータ LAN-DISK(HDL-CE))の `\\LANDISK-EF9038\log_backup\RaspberryPi_log\<フォルダ>` |
+| 転送 | logbackup001 の root の鍵 `/root/.ssh/id_ed25519_logarchive` で、proxyvm001 のユーザー user に SSH・scp で接続する。公開鍵は proxyvm001 の `C:\ProgramData\ssh\administrators_authorized_keys` に `from="192.168.200.10"` を付けて登録(変更前のコピーは `administrators_authorized_keys.bk20261122`) |
+| アーカイブの単位 | `/log_backup` のディレクトリごと・月ごとの tar.gz。名前は `YYYYMM_<ディレクトリ名>.tar.gz`(log001 から作ったものは `YYYYMM_<ディレクトリ名>_log001.tar.gz`) |
+| NAS の保管先フォルダ | IPアドレス名のディレクトリは `999_Other`。それ以外はドメイン名(`.raspberrypi.local`、`.racpberrypi.local`)を除き、`nvr`・`swx`・`wlx` で始まるものは `network`、残りは数字の直後の末尾の `b` を除いた名前のフォルダ。無ければ作る |
+| NAS の保管期間 | 60か月。名前が `YYYYMM_` で始まる tar.gz のうち、期間を過ぎたものを実行ごとに削除する |
+
+### 10.3 スクリプト
+
+| 項目 | 内容 |
+|---|---|
+| 場所 | logbackup001 の `/usr/local/script/log_archive.sh`(実体は nas001 の `/nfs/script`)。186行、権限 755 |
+| sha256 | `a0b5dff180c3841d0432a152629740ff49821c39b307f057a85770870251dac1` |
+| 設定値 | `LOCAL_KEEP_MONTHS=2`、`RETENTION_MONTHS=60`、`NAS_DELETE=yes` |
+| ログ | `/var/log/log_archive.log`(追記) |
+
+- 実行した月を当月として、当月より前の月で NAS に無いものを保管する。logbackup001 には前々月・前月・当月を残し、それより古い月は NAS の分と SHA256 が一致することを確認してから削除する(例:1月初めの実行では、12月分を保管し、10月分を削除する。11月・12月・1月が残る)
+- エラーが起きた時点で終了コード 1 で止まる。NAS で一致を確認していない元のログは削除しない
+- 同時に2つ動かないように `/run/log_archive.lock` でロックする。`/log_archive` がマウントされていなければ止まる
+- 何も変更しない表示用のオプション:`--plan`(月ごとの扱いと保管先)、`--show-map`(ディレクトリと保管先フォルダの対応)、`--list-expired`(保管期間を過ぎた NAS のファイル)
+
+### 10.4 実行結果
+
+| 日付 | 内容 | 結果 |
+|---|---|---|
+| 2026-11-22 | log001 のログ(1回だけの手作業) | 260個(202308〜202506、6,483ファイル、合計 552M)を NAS に保管し、NAS のハッシュ値の一致(260件)を確認して元のログを削除した。log001 の `/` の使用量は 14G から 4.2G |
+| 2026-11-22 22:26〜2026-11-23 0:20 | logbackup001 の初回(手動、過去分をまとめて処理) | NAS に保管 681件、logbackup001 から削除 626件、保管期間を過ぎたため NAS から削除 26件(201910〜202002)、ERROR なし。`/` の使用量は 55G から 13G |
+| 2026-11-23 | Rundeck のジョブ `log-archive-1st-0800` の登録 | 次回の実行は 2026-12-01 8:00 |
+
+未確認:logbackup001 の `/log_backup` に残っているのが 202609〜202611 のログだけであること(`--plan` の結果からの判断)、NAS に新しく作られたフォルダ(cache001、dhcp001、humidai002、logbackup001、ntp001〜ntp004)の一覧
+
+### 10.5 経緯
+
+- 構成・アーカイブの単位・保管先フォルダの規則・スクリプト・NAS の保管期間60か月は、生成AIの案で設定を進めたもの。利用者は「承認」していないが、2026-11-23 にこのまま進めることを了承した
+- 利用者の進め方は、スクリプトの作成と動作確認をしてから自動化すること。動作確認は 2026-11-22〜23 の手動実行で行った
+- ジョブの実行日時(毎月1日 8:00)は生成AIの案。毎月1日の再起動・バックアップのジョブ(0:27〜7:00 起動)と、前日の月末日 23:59 の logbackup001 の再起動の後になる
