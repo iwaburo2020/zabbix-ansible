@@ -1178,6 +1178,27 @@ rundeck_jobs:
       commands:
         - exec: "set -o pipefail; sudo /usr/local/script/backup_file.sh | sudo tee -a /var/log/backup_file.log > /dev/null"
 
+  - name: log-archive-1st-0800
+    group: backup
+    uuid: 07189b95-14a7-47e0-8002-da864fee839f
+    description: "Log archive (log_archive.sh on logbackup001), 1st day of month 08:00"
+    loglevel: INFO
+    executionEnabled: true
+    scheduleEnabled: true
+    schedule:
+      crontab: "0 0 8 1 * ? *"
+    nodefilters:
+      filter: "name: logbackup001"
+      dispatch:
+        threadcount: "1"
+        keepgoing: true
+    nodesSelectedByDefault: true
+    sequence:
+      keepgoing: false
+      strategy: node-first
+      commands:
+        - exec: "set -o pipefail; sudo /usr/local/script/log_archive.sh | sudo tee -a /var/log/log_archive.log > /dev/null"
+
   - name: roothints-sat-2359
     group: dns
     uuid: 86e1255c-225a-4443-9662-3876d196d7bf
