@@ -28,7 +28,7 @@ Zabbix 7.0 LTS の監視基盤(サーバー・DB・エージェント・監視�
 |---|---|---|---|
 | zabbix_db.yml | Zabbix 用データベース構築 | zabbix_db(raspberrypi-desktop) | Zabbix DB ユーザーのパスワードを設定(確認のため2回入力) |
 | zabbix_server.yml | Zabbix サーバー構築 | zabbix_server(raspberrypi-zabbix) | zabbix_db.yml 実行済み。Zabbix DB ユーザーのパスワードを入力 |
-| zabbix_agent.yml | エージェント2 導入(Raspberry Pi OS / Ubuntu)。Zabbix サーバーは zabbix ユーザーの adm グループ追加のみ | zabbix_agent、zabbix_server | `-l <ホスト名>` で指定。sudo パスワードが同じホストだけをまとめて指定 |
+| zabbix_agent.yml | エージェント2 導入(Raspberry Pi OS / Ubuntu)。Zabbix サーバーは zabbix ユーザーの adm グループ追加のみ | zabbix_agent、zabbix_server | `-l <ホスト名>` で指定 |
 | zabbix_agent_almalinux.yml | エージェント2 導入(AlmaLinux) | zabbix_agent_almalinux | `-l <ホスト名>` で指定 |
 | zabbix_agent_windows.yml | エージェント2 導入(Windows) | zabbix_agent_windows | `-l <ホスト名>` で指定 |
 | sudoers_pi.yml | pi の sudo 設定をほかのホストに合わせる(Raspberry Pi OS) | zabbix_agent_raspios、zabbix_server | `-l <ホスト名>` で指定 |
@@ -44,7 +44,7 @@ Zabbix 7.0 LTS の監視基盤(サーバー・DB・エージェント・監視�
 ## 実行方法
 
 - humidai002 の `~/zabbix-ansible` で `ansible-playbook <playbook名>` を実行する
-- BECOME password: raspberrypi-desktop(ubuntu)を対象に含む場合は ubuntu の sudo パスワード、それ以外は Enter のみ
+- BECOME password: の入力は不要(ansible.cfg は become_ask_pass = false。raspberrypi-desktop の ubuntu の sudo パスワードは `~/.ansible_become_raspberrypi-desktop` から読み込む)
 - 定義を変更するときの手順は docs/runbook/01_ansible_workflow.md を参照
 
 ## リポジトリに含めない情報
@@ -53,6 +53,7 @@ Zabbix 7.0 LTS の監視基盤(サーバー・DB・エージェント・監視�
 |---|---|
 | Zabbix API トークン | humidai002 の `~/.zabbix_api_token`(権限 600) |
 | SNMP コミュニティー名 | humidai002 の `~/.zabbix_snmp_community`(権限 600) |
+| raspberrypi-desktop の ubuntu の sudo パスワード | humidai002 の `~/.ansible_become_raspberrypi-desktop`(権限 600) |
 | Zabbix DB ユーザーのパスワード | リポジトリには保存しない(playbook 実行時に入力) |
 
 ## ドキュメント

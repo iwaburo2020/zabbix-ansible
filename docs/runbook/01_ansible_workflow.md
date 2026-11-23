@@ -27,12 +27,17 @@ Zabbix の設定・監視定義を変更するときは、必ず次の手順で�
 
 ### 2.1 BECOME password
 
-| 対象ホスト | 入力する内容 |
-|---|---|
-| raspberrypi-desktop(ユーザー ubuntu)を含む場合 | ubuntu の sudo パスワード |
-| 上記以外(Raspberry Pi OS、AlmaLinux、Windows、Zabbix API を使う playbook) | 何も入力せず Enter |
+入力は不要(BECOME password: は表示されない)。2026-11-23 に変更した。
 
-- zabbix_agent.yml は、sudo パスワードが同じホストだけを `-l` でまとめて指定する
+| 対象ホスト | sudo のパスワード |
+|---|---|
+| raspberrypi-desktop(ユーザー ubuntu) | host_vars/raspberrypi-desktop.yml の `ansible_become_password` で、humidai002 の `~/.ansible_become_raspberrypi-desktop`(権限 600)から読み込む |
+| 上記以外(Raspberry Pi OS、AlmaLinux) | 不要(sudo にパスワードが不要) |
+| Windows、Zabbix API を使う playbook | sudo を使わない |
+
+- ansible.cfg は `become_ask_pass = false`
+- `~/.ansible_become_raspberrypi-desktop` が無いと、raspberrypi-desktop を対象にする playbook・コマンドはエラーで止まる
+- ubuntu の sudo パスワードを変えたときは、このファイルも同じ値に書き換える
 
 ### 2.2 playbook が求めるパスワード
 

@@ -13,3 +13,7 @@ zabbix_release_url: "https://repo.zabbix.com/zabbix/7.0/ubuntu/pool/main/z/zabbi
 # Ubuntu 26.04 は sudo-rs が既定のため、Ansible の become が応答待ちで失敗する
 # OS標準の設定(update-alternatives)は変更せず、併設されている従来の sudo(sudo.ws)を使う
 ansible_become_exe: sudo.ws
+
+# ubuntu の sudo パスワード。リポジトリに含めず、humidai002 の ~/.ansible_become_raspberrypi-desktop(権限 600)から読み込む
+# (ansible.cfg は become_ask_pass = false。ほかのホストは sudo にパスワードが不要)
+ansible_become_password: "{{ lookup('ansible.builtin.file', lookup('ansible.builtin.env', 'HOME') + '/.ansible_become_raspberrypi-desktop') }}"
