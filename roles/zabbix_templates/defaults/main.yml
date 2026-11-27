@@ -78,6 +78,8 @@ zabbix_log_exclude:
   - 'rc\.local\[\d+\]: Error: ipv4: Address already assigned\.'
   # Raspberry Pi 5 の起動時の raspberrypi-poe-pwm の行(Pi 5 のファームウェアが PoE HAT への問い合わせを受け付けず -EINVAL・-22 になる。-EIO・-5 は HAT が応答しない場合なので外さない)
   - 'kernel: raspberrypi-poe-pwm \S+: (Failed to get duty cycle: -EINVAL|probe with driver raspberrypi-poe-pwm failed with error -22)'
+  # named の問い合わせ拒否(REFUSED。allow-query の許可範囲の外からの問い合わせを、設定どおり拒否した記録。timed out・SERVFAIL・failure は名前解決の失敗なので外さない)
+  - 'named\[\d+\]: client @0x[0-9a-f]+ \S+ \(\S+\): query failed \(REFUSED\) for '
 
 # Windows イベントログから外す行(グローバル正規表現。メッセージの本文に対する条件)
 zabbix_eventlog_global_regexp: Eventlog-Windows
