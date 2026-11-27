@@ -10,6 +10,79 @@ zabbix_eventlog_severity: "Error|Critical"
 # ログの障害は、この期間に新しい行が無ければ自動で解決する
 zabbix_log_window: 10m
 
+# ログ監視から外す行(グローバル正規表現)
+#   収集する行: zabbix_log_regexp に一致し、かつ zabbix_log_exclude のどれにも一致しない行
+#   Zabbix の「管理 > 一般設定 > 正規表現」に登録し、ログ監視の項目のキーからは @<名前> で参照する
+#   外す行を増やす・減らすときは、下の一覧だけを変更して ansible-playbook zabbix_templates.yml を実行する
+#   (項目のキーは変わらない)。OS・アプリ側の設定は変更しない
+#   正規表現は PCRE。大文字小文字は区別しない。1件は255文字以内
+zabbix_log_global_regexp: Log-Linux
+zabbix_log_exclude:
+  # pipewire・wireplumber・pipewire-pulse の RTKit error(ServiceUnknown)
+  - '(pipewire|wireplumber|pipewire-pulse)\[\d+\]: mod\.rt: RTKit error: org\.freedesktop\.DBus\.Error\.ServiceUnknown'
+  # wireplumber の UPower の行(OS の起動時)
+  - 'wireplumber\[\d+\]: default: Failed to get percentage from UPower: org\.freedesktop\.DBus\.Error\.NameHasNoOwner'
+  # Ansible の実行記録(実行したコマンドの引数の中の語に一致する)
+  - 'ansible-ansible\.[a-z_.]+:? Invoked with '
+  # update-notifier-download の開始・終了(ユニットの説明文に failed を含む)
+  - 'systemd\[1\]: (Starting|Finished|Started|Stopped) update-notifier-download\.(service|timer) - Download data for packages that failed at package install time'
+  # apport-autoreport の行(ユニットの説明文に error を含む。OS の起動時)
+  - 'systemd\[1\]: apport-autoreport\.(path|timer) - Process error reports when automatic reporting is enabled .* skipped, unmet condition check'
+  # grub-initrd-fallback の開始・終了(ユニットの説明文に failed を含む。OS の起動時)
+  - 'systemd\[1\]: (Starting|Finished) grub-initrd-fallback\.service - GRUB failed boot detection'
+  # fwupd の TPM(tcti・esys)の行
+  - 'fwupd\[\d+\]: (ERROR|WARNING):(tcti|esys):src/'
+  # fwupd の TPM のイベントログの行
+  - 'fwupd\[\d+\]: .*FuPluginTpm +failed to load eventlog'
+  # Kea の DhcpLFC の統計(errors: 0. のときだけ外す)
+  - 'DhcpLFC: INFO +\[DhcpLFC\.\d+\] LFC_(WRITE|READ)_STATS Leases: \d+, attempts: \d+, errors: 0\.'
+  # named の DNS format error(invalid response)
+  - 'named\[\d+\]: DNS format error from \S+ resolving '
+  # named の起動時の構成オプションの行
+  - 'named\[\d+\]: built with '
+  # named の起動時の notify 失敗(ネットワーク開始前)
+  - 'named\[\d+\]: zone \S+: notify to \S+ failed: network unreachable'
+  # dbus の Avahi の行(Unit dbus-org.freedesktop.Avahi.service not found)
+  - 'dbus-daemon\[\d+\]: \[system\] Activation via systemd failed for unit ''dbus-org\.freedesktop\.Avahi\.service'''
+  # rsyslogd の転送失敗(Network is unreachable。OS の起動時、ネットワーク開始前)
+  - 'rsyslogd: omfwd(/udp)?: socket \d+: (sendto\(\) error|error 101 sending via udp): Network is unreachable'
+  # blkmapd の行(OS の起動時)
+  - 'blkmapd\[\d+\]: open pipe file /run/rpc_pipefs/nfs/blocklayout failed: No such file or directory'
+  # NetworkManager の ifstate の行(OS の起動時)
+  - 'NetworkManager\[\d+\]: <info> +\[\d+\.\d+\] failed to open /run/network/ifstate'
+  # bcm2708_fb の行(OS の起動時)
+  - 'kernel: bcm2708_fb \S+: probe with driver bcm2708_fb failed with error -2'
+  # alsactl の行(OS の起動時)
+  - 'alsactl\[\d+\]: alsa-lib main\.c:\d+:\(snd_use_case_mgr_open\) error: failed to import hw:\d+ use case configuration -2'
+  # avahi-daemon の IPv6 の行(IPv6 無効)
+  - 'avahi-daemon\[\d+\]: (socket\(\) failed: Address family not supported by protocol|Failed to create IPv6 socket, proceeding in IPv4 only mode)'
+  # rpc.mountd・rpc.statd の udp6・tcp6 の行(IPv6 無効)
+  - 'rpc\.(mountd|statd)\[\d+\]: Failed to create listener xprt \((mountd|statd), \d+, (udp6|tcp6)\)'
+  # nfsdctl lockd の行(OS の起動時)
+  - 'sh\[\d+\]: nfsdctl: lockd configuration failure'
+  # pci の failed to assign の行(OS の起動時)
+  - 'kernel: pci [0-9a-f:.]+: (bridge window|BAR \d+) \[io +size 0x[0-9a-f]+\]: failed to assign'
+  # chronyd の leap second の行(OS の起動時)
+  - 'chronyd\[\d+\]: Timezone right/UTC failed leap second check, ignoring'
+  # ModemManager の行(OS の起動時)
+  - 'ModemManager\[\d+\]: <wrn> +\[base-manager\] couldn''t create modem for device ''\S+'': Failed to find primary AT port'
+  # カーネルの起動メッセージ(KHO、ACPI、RAS、drm panic)
+  - 'kernel: (KHO: Failed to reserve (lowmem scratch buffer|scratch area)|ACPI: thermal: \[Firmware Bug\]: Invalid critical threshold|RAS: Correctable Errors collector initialized|.*\[drm\] Registered \d+ planes with drm panic)'
+  # カーネルの起動メッセージ(ima)
+  - 'kernel: (message repeated \d+ times: \[ )?ima: Error Communicating to TPM chip'
+  # kdump-tools の lsmod の行(OS の起動時)
+  - 'kdump-tools\[\d+\]: lsmod: ERROR: could not open ''/sys/module/i915/holders'''
+  # dnsmasq の CAP_CHOWN の行(OS の起動時)
+  - 'dnsmasq\[\d+\]: chown of PID file /run/nm-dnsmasq-\S+\.pid failed: please add capability CAP_CHOWN'
+  # rc.local の Address already assigned の行(OS の起動時)
+  - 'rc\.local\[\d+\]: Error: ipv4: Address already assigned\.'
+
+# Windows イベントログから外す行(グローバル正規表現。メッセージの本文に対する条件)
+zabbix_eventlog_global_regexp: Eventlog-Windows
+zabbix_eventlog_exclude:
+  # ストレージ最適化ツールのトリム非対応(0x8900002A。ボリュームを置いたハードウェアがトリムに対応していない)
+  - '\(0x8900002A\)'
+
 # 独自テンプレートの定義
 #   link      : リンクする標準テンプレート(標準テンプレートは変更しない)
 #   logs      : Linux のログファイル(Active)

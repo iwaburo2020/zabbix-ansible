@@ -14,19 +14,33 @@
 
 ## 2. ログ監視
 
-- 定義: roles/zabbix_templates/defaults/main.yml(zabbix_log_regexp、zabbix_eventlog_severity、zabbix_log_window)
+- 定義: roles/zabbix_templates/defaults/main.yml(zabbix_log_regexp、zabbix_log_exclude、zabbix_eventlog_severity、zabbix_eventlog_exclude、zabbix_log_window)
 - エージェントの Active チェックで収集する
 
 | 対象 | テンプレート | 収集する内容 |
 |---|---|---|
-| Linux: /var/log/syslog、/var/log/messages | Base-Linux | 正規表現 `(?i)(error\|fail\|crit\|panic\|alert\|emerg)` に一致する行(大文字小文字を区別しない) |
-| Windows: イベントログ System、Application | Base-Windows | レベルが Error、Critical のもの |
+| Linux: /var/log/syslog、/var/log/messages | Base-Linux | 正規表現 `(?i)(error\|fail\|crit\|panic\|alert\|emerg)` に一致する行(大文字小文字を区別しない)。ただし 2.1 の外す行を除く |
+| Windows: イベントログ System、Application | Base-Windows | レベルが Error、Critical のもの。ただし 2.1 の外す行を除く |
 
 - 収集した時点で障害(Log message detected)とする
 - 10分間(zabbix_log_window: 10m)新しい行が無ければ、障害は自動で解決する
 - Zabbix server(raspberrypi-zabbix)もログ監視の対象に含める
 - ログを読むため、zabbix ユーザーを adm グループに追加している(zabbix_agent.yml)
 - NFS ブートのホストは、NFS サーバー(nas001b)側の設定で zabbix ユーザーがログを読めるようにしている(zabbix_nfs.yml)
+
+### 2.1 ログ監視から外す行
+
+- 調べた結果、対応が不要と判断した行は、Zabbix のグローバル正規表現(管理 > 一般設定 > 正規表現)で収集の対象から外す。OS・アプリ側の設定は変更しない
+- 外す行の一覧は roles/zabbix_templates/defaults/main.yml の zabbix_log_exclude(Linux)、zabbix_eventlog_exclude(Windows)。1行ごとに何の行かをコメントで書く
+- 一覧を変更したら ansible-playbook zabbix_templates.yml を実行する(項目のキーは変わらない)
+
+| グローバル正規表現 | 式 | 参照する項目のキー |
+|---|---|---|
+| Log-Linux | zabbix_log_regexp(結果が TRUE)と、zabbix_log_exclude の各行(結果が FALSE) | `log[/var/log/syslog,@Log-Linux,,,skip]`、`log[/var/log/messages,@Log-Linux,,,skip]` |
+| Eventlog-Windows | zabbix_eventlog_exclude の各行(結果が FALSE) | `eventlog[System,@Eventlog-Windows,"Error\|Critical",,,,skip]`、`eventlog[Application,@Eventlog-Windows,"Error\|Critical",,,,skip]` |
+
+- すべての式を満たした行だけが収集される(Zabbix の仕様)。大文字小文字は区別しない
+- 項目の uuid は、グローバル正規表現に替える前のキーから生成した値のままにしている(同じ項目として更新され、履歴が残る)
 
 ## 3. メンテナンス期間
 

@@ -1,4 +1,37 @@
 ---
+# ログ監視で使うグローバル正規表現を登録する(内容が同じ場合は変更しない)
+# テンプレートの項目のキーが @<名前> で参照するため、テンプレートより先に登録する
+#   1つ目の式: 収集する行(結果が TRUE)
+#   2つ目以降: 外す行(結果が FALSE)。すべての式を満たした行だけが収集される
+#   大文字小文字は区別しない(case_sensitive: false)
+- name: グローバル正規表現登録
+  community.zabbix.zabbix_regexp:
+    name: "{{ item.name }}"
+    test_string: "{{ item.test_string }}"
+    expressions: "{{ zabbix_regexp_expressions }}"
+    state: present
+  vars:
+    zabbix_regexp_expressions: >-
+      {%- set r = [] -%}
+      {%- for e in item.include -%}
+      {%- set _ = r.append({'expression': e, 'expression_type': 'result_is_true', 'case_sensitive': false}) -%}
+      {%- endfor -%}
+      {%- for e in item.exclude -%}
+      {%- set _ = r.append({'expression': e, 'expression_type': 'result_is_false', 'case_sensitive': false}) -%}
+      {%- endfor -%}
+      {{ r }}
+  loop:
+    - name: "{{ zabbix_log_global_regexp }}"
+      test_string: "kernel: test error"
+      include: ["{{ zabbix_log_regexp }}"]
+      exclude: "{{ zabbix_log_exclude }}"
+    - name: "{{ zabbix_eventlog_global_regexp }}"
+      test_string: "test"
+      include: []
+      exclude: "{{ zabbix_eventlog_exclude }}"
+  loop_control:
+    label: "{{ item.name }}"
+
 # 独自テンプレートを登録する(内容が同じ場合は変更しない。標準テンプレートは変更しない)
 - name: 独自テンプレート登録
   community.zabbix.zabbix_template:

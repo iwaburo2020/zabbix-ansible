@@ -1,5 +1,6 @@
 {#- Zabbix 7.0 のインポート形式(YAML)。item(zabbix_custom_templates の1件)から1テンプレートを生成する -#}
 {#- uuid は名前とキーから固定値を生成する(Zabbix は UUIDv4 形式を要求するため version・variant の桁を合わせる) -#}
+{#- ログ監視の項目のキーは、正規表現をグローバル正規表現(@名前)で参照する。uuid は変更前のキー(uuid_key)から生成した値のままにする(Zabbix は uuid が同じ項目を同じ項目として更新するため、履歴が残る) -#}
 {%- macro uuid4(seed) -%}
 {%- set h = (seed | to_uuid) | replace('-', '') -%}
 {{ h[0:12] ~ '4' ~ h[13:16] ~ '8' ~ h[17:32] }}
@@ -24,27 +25,29 @@ zabbix_export:
 {% endif %}
       items:
 {% for f in item.logs | default([]) %}
-{% set key = 'log[' ~ f ~ ',"' ~ zabbix_log_regexp ~ '",,,skip]' %}
-        - uuid: {{ uuid4(t ~ '/' ~ key) }}
+{% set key = 'log[' ~ f ~ ',@' ~ zabbix_log_global_regexp ~ ',,,skip]' %}
+{% set uuid_key = 'log[' ~ f ~ ',"' ~ zabbix_log_regexp ~ '",,,skip]' %}
+        - uuid: {{ uuid4(t ~ '/' ~ uuid_key) }}
           name: {{ ('Log ' ~ f) | to_json }}
           type: ZABBIX_ACTIVE
           key: {{ key | to_json }}
           value_type: LOG
           triggers:
-            - uuid: {{ uuid4(t ~ '/' ~ key ~ '/trigger') }}
+            - uuid: {{ uuid4(t ~ '/' ~ uuid_key ~ '/trigger') }}
               expression: {{ ('nodata(/' ~ t ~ '/' ~ key ~ ',' ~ zabbix_log_window ~ ')=0') | to_json }}
               name: {{ ('Log message detected in ' ~ f) | to_json }}
               priority: WARNING
 {% endfor %}
 {% for l in item.eventlogs | default([]) %}
-{% set key = 'eventlog[' ~ l ~ ',,"' ~ zabbix_eventlog_severity ~ '",,,,skip]' %}
-        - uuid: {{ uuid4(t ~ '/' ~ key) }}
+{% set key = 'eventlog[' ~ l ~ ',@' ~ zabbix_eventlog_global_regexp ~ ',"' ~ zabbix_eventlog_severity ~ '",,,,skip]' %}
+{% set uuid_key = 'eventlog[' ~ l ~ ',,"' ~ zabbix_eventlog_severity ~ '",,,,skip]' %}
+        - uuid: {{ uuid4(t ~ '/' ~ uuid_key) }}
           name: {{ ('Eventlog ' ~ l) | to_json }}
           type: ZABBIX_ACTIVE
           key: {{ key | to_json }}
           value_type: LOG
           triggers:
-            - uuid: {{ uuid4(t ~ '/' ~ key ~ '/trigger') }}
+            - uuid: {{ uuid4(t ~ '/' ~ uuid_key ~ '/trigger') }}
               expression: {{ ('nodata(/' ~ t ~ '/' ~ key ~ ',' ~ zabbix_log_window ~ ')=0') | to_json }}
               name: {{ ('Eventlog ' ~ l ~ ' error detected') | to_json }}
               priority: WARNING
