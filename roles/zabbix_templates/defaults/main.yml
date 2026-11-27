@@ -76,6 +76,8 @@ zabbix_log_exclude:
   - 'dnsmasq\[\d+\]: chown of PID file /run/nm-dnsmasq-\S+\.pid failed: please add capability CAP_CHOWN'
   # rc.local の Address already assigned の行(OS の起動時)
   - 'rc\.local\[\d+\]: Error: ipv4: Address already assigned\.'
+  # Raspberry Pi 5 の起動時の raspberrypi-poe-pwm の行(Pi 5 のファームウェアが PoE HAT への問い合わせを受け付けず -EINVAL・-22 になる。-EIO・-5 は HAT が応答しない場合なので外さない)
+  - 'kernel: raspberrypi-poe-pwm \S+: (Failed to get duty cycle: -EINVAL|probe with driver raspberrypi-poe-pwm failed with error -22)'
 
 # Windows イベントログから外す行(グローバル正規表現。メッセージの本文に対する条件)
 zabbix_eventlog_global_regexp: Eventlog-Windows
