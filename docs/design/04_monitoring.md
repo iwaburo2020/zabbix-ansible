@@ -113,5 +113,7 @@ gps001b の定期運用(OS 再起動と gpsd 停止)の時間帯に障害を抑�
 | 2026-11-02 | logrotate の失敗(raspberrypi-desktop):/etc/logrotate.d/rsyslog・rsyslog-custom の su syslog adm(グループ adm では /var/log に書き込めない)の行を削除。rsyslog は OS 標準の内容に戻った | logrotate_error_fix.yml |
 | 2026-11-02 | logrotate 実行時の squid の ERROR の行(proxy001b):/etc/squid/squid.conf の logformat combined(組み込みの書式の再定義で、squid は無視していた)の行を削除 | logrotate_error_fix.yml |
 | 2026-11-02 | squid の DNS エラー(proxy001b):pwm-image.trendmicro.com・pwm-cdn.trendmicro.com は宛先側の DNS に A レコードが無く(CloudFront への CNAME のみ)、squid が DNS failure の ERROR を出していたため、/etc/squid/squid.conf の「http_access allow lan」の直前に、2 つのホスト名への要求を DNS で調べる前に拒否する「acl dns_nodata_dst dstdomain …」と「http_access deny dns_nodata_dst」を追加 | proxy001b の /etc/squid/squid.conf(手作業で変更。別チャット「squid DNS エラー対応」) |
+| 2026-11-27 | 調べた結果、対応が不要と判断した行をログ監視から外した(2.1)。Linux は 29 件、Windows は 1 件の条件。2026-11-03〜11-24 に収集した 41,867 行のうち 5,928 行が対象 | roles/zabbix_templates/defaults/main.yml(zabbix_log_exclude、zabbix_eventlog_exclude) |
+| 2026-11-27 | stork-server の Kea Leases puller のエラー(dhcp001b。約1分ごとに出続け、/var/log/syslog の障害が 10/18 から解決しなかった):Stork サーバーが全リースの取得(リーストラッキング)をエージェントに要求し、エージェントでその機能を有効にしていないため「This feature is not enabled.」で失敗していた。使っていない機能のため、Stork の画面「Configuration > Settings」の「Kea Leases Puller Interval」を 60 から 0 にして取得を止めた(戻すときは 60)。09:54:55 の行を最後に止まり、障害も解決 | dhcp001b の Stork の設定(画面で変更) |
 
-- 未対応: proxy001b の ipv6.msftconnecttest.com の DNS エラー(2026-11-02 09:33:07 に 1 件)
+- 未対応(原因を調べて対応する):proxy001b の squid の DNS エラー(pwm-image.trendmicro.jp、ipv6.msftconnecttest.com)、dns001b・dns002b の named の query failed、ntp003 の rpi-poe、proxy001b・wap001b の raspberrypi-poe-pwm、Zabbix server の snmpd、raspberrypi-desktop の rundeckd.service
